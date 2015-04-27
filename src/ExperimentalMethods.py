@@ -6,12 +6,12 @@ Created on Apr 24, 2015
 import arcpy, os, time
 startTime = time.time()
 
-outputDir = r"C:\Users\Administrator\My Documents\Aptana Studio 3 Workspace\DEQ-TankRisk\data\outputNears.gdb"
-inputDir = r"Database Connections\agrc@SGID10@gdb10.agrc.utah.gov.sde"
+outputDir = r"C:\Users\kwalker\Documents\Aptana Studio 3 Workspace\DEQ-TankRisk\data\outputNears.gdb"
+inputDir = r"Database Connections\agrc@SGID10@gdb10.agrc.utah.sde"#Outside state network path issue
 
 nearTablePrefix = "Near_"
 tankLayer = "SGID10.ENVIRONMENT.FACILITYUST" 
-riskLayers = ["SGID10.WATER.StreamsNHDHighRes", "SGID10.WATER.LakesNHDHighRes","SGID10.ENVIRONMENT.DWQAssessedWaters",
+riskLayers = ["SGID10.ENVIRONMENT.DWQAssessedWaters", "SGID10.WATER.StreamsNHDHighRes", "SGID10.WATER.LakesNHDHighRes",
            "SGID10.DEMOGRAPHIC.CensusTracts2010", "SGID10.GEOSCIENCE.ShallowGroundWater", "SGID10.GEOSCIENCE.Soils",
            "SGID10.ENVIRONMENT.DWQAssessmentUnits", "SGID10.WATER.Wetlands", "SGID10.GEOSCIENCE.Aquifer_RechargeDischargeAreas",]
 
