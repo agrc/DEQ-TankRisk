@@ -7,7 +7,7 @@ import arcpy, os, time
 startTime = time.time()
 
 outputDir = r"C:\Users\kwalker\Documents\Aptana Studio 3 Workspace\DEQ-TankRisk\data\outputNears.gdb"
-inputDir = r"Database Connections\agrc@SGID10@gdb10.agrc.utah.sde"#Outside state network path issue
+inputDir = r"Database Connections\agrc@SGID10@gdb10.agrc.utah.gov.sde"#Outside state network path issue
 
 nearTablePrefix = "Near_"
 tankLayer = "SGID10.ENVIRONMENT.FACILITYUST" 
