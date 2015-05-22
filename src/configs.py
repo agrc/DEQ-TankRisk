@@ -5,7 +5,7 @@ Created on May 8, 2015
 '''
 import arcpy, os
 
-class source(object):
+class MapSource(object):
     
     
     def __init__(self):
@@ -24,7 +24,7 @@ class source(object):
 
 
 if __name__ =="__main__":
-    srcConfigs = source()
+    srcConfigs = MapSource()
     srcConfigs.getSelectedlayers()
     print "done"
     

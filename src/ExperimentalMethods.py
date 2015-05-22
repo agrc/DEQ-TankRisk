@@ -6,7 +6,13 @@ Created on Apr 24, 2015
 import arcpy, os, time
 startTime = time.time()
 
-outputDir = r"C:\Users\kwalker\Documents\Aptana Studio 3 Workspace\DEQ-TankRisk\data\outputNears.gdb"
+outputDir = os.path.join(r"C:\Users\Administrator\My Documents\Aptana Studio 3 Workspace\DEQ-TankRisk\data\outputs",
+                                   "ExprGdb" + time.strftime("%Y%m%d%H%M%S"))
+os.makedirs(outputDir)
+x = arcpy.CreateFileGDB_management(outputDir, "nears.gdb") 
+print x
+outputDir = os.path.join(outputDir, "nears.gdb")
+
 inputDir = r"Database Connections\agrc@SGID10@gdb10.agrc.utah.gov.sde"#Outside state network path issue
 
 nearTablePrefix = "Near_"
