@@ -4,82 +4,106 @@ Created on May 22, 2015
 @author: kwalker
 '''
 import arcpy, os, time
-import configs
+from configs import *
 
-class Result(object):
+class TankResult(object):
+
     
-    def __init__(self):
-        self.facilityUstId = None
-        
+    def __init__(self, tankId):
+        #Tank facility Id
+        self.facilityUstId = tankId
+        #In polygon feature properties
         self.isSurfaceWaterZone = None
+        self.surfaceWaterSeverity = None
         self.isAquiferArea = None
+        self.aquiferSeverity = None
         self.isAssessedWater = None
+        self.assessedWaterSeverity = None
         self.isWetLand = None
-        
-        self.distPointOfDiversion = None
-        self.distStream = None
-        self.distLake = None
-        
+        self.wetLandSeverity = None
+        #Distance feature properties
+        self.pointOfDiversionDist = None
+        self.pointOfDiversionSeverity = None
+        self.streamDist = None
+        self.streamSeverity = None
+        self.lakeDist = None
+        self.lakeSeverity = None
+        #Attribute feature properties
         self.shallowGroundWaterDepth = None
+        self.shallowGroundWaterSeverity = None
         self.soilTexture = None
+        self.soilSeverity = None
         self.censusDensity = None
+        self.censusSeverity = None
+        
+    def populateFieldsForRiskFeature(self, featureName, value, severity):
+        if featureName == "Aquifer_RechargeDischargeAreas":
+            self.aquiferSeverity = severity
+        
+    def getResultTableRow(self):
+        pass
 
 class RiskFeature(object):
     
-    def __init__(self, layerName, outputGdb):
+    def __init__(self, layerPath, layerName, outputGdb):
+        self.layerPath = layerPath
         self.layerName = layerName
-        self.nearTable = "near_" + layerName.split(".")[-1]
+        self.valueAttribute = "{}_{}".format(layerName, "val")
+        self.severityAttribute = "{}_{}".format(layerName, "sev")
+        self.nearTable = "near_" + layerName
         self.nearTablePath = os.path.join(outputGdb, self.nearTable)
         self.nearDistField = "NEAR_DIST"
         self.nearTankIDField = "IN_FID"
         self.nearRiskIdField = "NEAR_FID"
+        self.outputGdb = outputGdb
         self.tankResults = {}
         
     def createNearTable(self, tankPoints):
         inFeature = tankPoints
         nearTable = os.path.join(self.outputGdb, self.nearTable)
-        nearFeature = self.layerName
+        nearFeature = self.layerPath
         nearTime = time.time()
         arcpy.GenerateNearTable_analysis (inFeature, nearFeature, nearTable)
-        print "Near_{}: {}".format(self.layerName.split(".")[-1], time.time() - nearTime)
+        print "Near_{}: {}".format(self.layerPath.split(".")[-1], time.time() - nearTime)
         return nearTable
         
 class InPolygonFeature (RiskFeature):
-    
-    def __init__(self, layerName):
-        super(InPolygonFeature, self).__init__(layerName)
         
     def getTankResults(self):
-        with arcpy.SearchCursor(in_table = self.nearTablePath, 
-                           where_clause = """{} = 0""".format(self.nearDistField), 
+        with arcpy.da.SearchCursor(in_table = self.nearTablePath, 
                            field_names = [self.nearTankIDField, self.nearDistField]) as cursor:
             for row in cursor:
-                self.tankResults[row[0]] = row[1]#change this to yes value, 1 maybe
+                nearDistance = row[1]
+                tankId = row[0]
+                if nearDistance == 0:
+                    self.tankResults[tankId] = 1#Tank point is in risk polygon
+                else:
+                    self.tankResults[tankId] = 0
         
         return self.tankResults
         
         
 class DistanceFeature (RiskFeature):
-    
-    def __init__(self, layerName):
-        super(DistanceFeature, self).__init__(layerName)
         
     def getTankResults(self):
-        with arcpy.SearchCursor(in_table = self.nearTablePath, 
+        with arcpy.da.SearchCursor(in_table = self.nearTablePath, 
                            field_names = [self.nearTankIDField, self.nearDistField]) as cursor:
+            nearDistance = row[1]
+            tankId = row[0]
             for row in cursor:
-                self.tankResults[row[0]] = row[1]
+                self.tankResults[tankId] = nearDistance
         
         return self.tankResults
 
 class AttributeFeature (RiskFeature):
     
-    def __init__(self, layerName, attributeFields):
-        super(AttributeFeature, self).__init__(layerName)
+    def __init__(self, featurePath, featureName, outputGdb, attributeFields):
+        super(AttributeFeature, self).__init__(featurePath, featureName, outputGdb)
         self.attributeFields = attributeFields
     
     def getTankResults(self):
-        arcpy.JoinField_management(self.nearTablePath, self.nearRiskIdField, self.layerName, self.attributeFields)
+        arcpy.JoinField_management(self.nearTablePath, self.nearRiskIdField, 
+                                   self.layerPath, arcpy.Describe(self.layerPath).OIDFieldName, self.attributeFields)
         
         fields = [self.nearTankIDField]
         fields.extend(self.attributeFields)
@@ -95,44 +119,53 @@ class AttributeFeature (RiskFeature):
 
 class TankRisk(object):
     def __init__(self):
+        
         self.inPolygonLayers = ["Aquifer_RechargeDischargeAreas", "Wetlands",]
         self.distanceLayers = ["LakesNHDHighRes", "StreamsNHDHighRes", ]
         self.attributeLayers = {"DWQAssessmentUnits":"STATUS2006", "Soils":"TEX_DEF", 
-                                "ShallowGroundWater":"DEPTH", "CensusTracts2010":["AREALAND", "TotalPopulation"]}
+                                "ShallowGroundWater":"DEPTH", "CensusTracts2010":["POP100", "AREALAND"]}
+        self.tankResults = {}
+ 
+    def inPolygonProcessing(self, results):
+        for tankId in results:
+            if tankId not in self.tankResults:
+                self.tankResults[tankId] = TankResult(tankId)
+            
+            self.tankResults[tankId]
+    def censusProcessing(self, results):
+        for tankId in results:
+            popDensity = int(results[tankId][0])/int(results[tankId][0])
+            results[tankId] = popDensity
         
-
-#     def createNearTable(self, tanks, riskFeature, outputGdb):
-#         inFeature = tanks
-#         nearTablePrefix = "near_"
-#         nearTime = time.time()
-#         nearTableSuffix = riskFeature.split(".")[-1]
-#         nearTable = os.path.join(outputGdb, nearTablePrefix + nearTableSuffix)
-#         nearFeature = riskFeature
-#         arcpy.GenerateNearTable_analysis (inFeature, nearFeature, nearTable)
-#         print "Near_{}: {}".format(nearTableSuffix, time.time() - nearTime)
-#         return nearTable
-#     
-#     def getResults(self):
-#         
-#         for layer in self.inPolygonLayers:
-#             pass
-#     
-    def censusProcessing(self):
+        pass
     def riskFeatureFactory(self, riskFeature):
+        featureName = riskFeature.split(".")[-1]
+        if LayerConstants.layerNames[featureName].type == LayerConstants.IN_POLYGON:
+            return InPolygonFeature(riskFeature, featureName, Outputs.outputGdb)
+        elif LayerConstants.layerNames[featureName].type == LayerConstants.DISTANCE:
+            return DistanceFeature(riskFeature, featureName, Outputs.outputGdb)
+        elif LayerConstants.layerNames[featureName].type == LayerConstants.ATTRIBUTE:
+            return AttributeFeature(riskFeature, featureName, Outputs.outputGdb, LayerConstants.layerNames[featureName].calcFields)
+        else:
+            print "Unkown layer error"
+        pass
         
     def start(self):
-        tankPoints = r"Database Connections\agrc@SGID10@gdb10.agrc.utah.gov.sde\SGID10.ENVIRONMENT.FACILITYUST" 
-        riskFeatures = configs.MapSource().getSelectedlayers()
+        tankPoints = r"Database Connections\agrc@SGID10@gdb10.agrc.utah.sde\SGID10.ENVIRONMENT.FACILITYUST" 
+        riskFeatures = MapSource().getSelectedlayers()
         print riskFeatures
-        
-        outputDirectory = r"C:\Users\Administrator\My Documents\Aptana Studio 3 Workspace\DEQ-TankRisk\data\outputs"
-        outputGdb = "nears_{}.gdb".format(time.strftime("%Y%m%d%H%M%S"))
-        arcpy.CreateFileGDB_management(outputDirectory, outputGdb)
-        outputGdb = os.path.join(outputDirectory, outputGdb)
+        arcpy.CreateFileGDB_management(Outputs.outputDirectory, Outputs.outputGdbName)
         
         for riskFeature in riskFeatures:
-            rf = RiskFeature(riskFeature, outputGdb)
+            rf = self.riskFeatureFactory(riskFeature)
+            print type(rf)
             rf.createNearTable(tankPoints)
+            results = rf.getTankResults()
+            if type(rf) == "InPolygonFeature":
+                pass
+                
+            for r in results:
+                print "{}: {}".format(r, results[r])
             break        
         
 
