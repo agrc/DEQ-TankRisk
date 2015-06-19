@@ -44,6 +44,38 @@ class TankResult(object):
         pass
 
 class RiskFeature(object):
+    IN_POLYGON = "inPolygon"
+    DISTANCE = "distance"
+    ATTRIBUTE = "attribute"
+    layerNames = {"Aquifer_RechargeDischargeAreas": LayerAttributes(IN_POLYGON, 
+                                                                 "aquiferVal", "aquiferSev", 
+                                                                 "aquiferVal", "aquiferSev"),
+                    "Wetlands": LayerAttributes(IN_POLYGON,
+                                               "wetLandsVal", "wetLandsSev",
+                                               "wetLandsVal", "wetLandsSev"),
+                    "LakesNHDHighRes": LayerAttributes(DISTANCE ,
+                                                      "lakesVal", "lakeSev",
+                                                      "lakesVal", "lakeSev"), 
+                    "StreamsNHDHighRes": LayerAttributes(DISTANCE ,
+                                                        "streamsVal", "streamsSev",
+                                                        "streamsVal", "streamsSev"),
+                    "DWQAssessmentUnits": LayerAttributes(ATTRIBUTE,
+                                                           "assessmentVal", "assessmentSev",
+                                                           "assessmentVal", "assessmentSev",
+                                                           ["STATUS2006"]), 
+                    "Soils": LayerAttributes(ATTRIBUTE,
+                                               "soilVal", "soilSev",
+                                               "soilVal", "soilSev",
+                                               ["TEX_DEF"]), 
+                    "ShallowGroundWater": LayerAttributes(ATTRIBUTE,
+                                                         "shallowWaterVal", "shallowWaterSev",
+                                                         "shallowWaterVal", "shallowWaterSev",
+                                                         ["DEPTH"]), 
+                    "CensusTracts2010":LayerAttributes(ATTRIBUTE,
+                                                      "censusVal", "censusSev",
+                                                      "censusVal", "censusSev",
+                                                      ["POP100", "AREALAND"])
+                  }
     
     def __init__(self, layerPath, layerName, outputGdb):
         self.layerPath = layerPath
@@ -66,6 +98,89 @@ class RiskFeature(object):
         arcpy.GenerateNearTable_analysis (inFeature, nearFeature, nearTable)
         print "Near_{}: {}".format(self.layerPath.split(".")[-1], time.time() - nearTime)
         return nearTable
+    
+    def getLayerValAndScore(self, row):
+        val = 0
+        score = 0
+        
+        if self.layerName == "Aquifer_RechargeDischargeAreas":
+            val, score = self.inPolygonValAndScore(row[1])
+        
+        elif self.layerName == "Wetlands":
+            val, score = self.inPolygonValAndScore(row[1])
+        
+        elif self.layerName == "LakesNHDHighRes":
+            val = row[1]
+            score = self.distanceScore(row[1])
+        
+        elif self.layerName == "StreamsNHDHighRes":
+            val = row[1]
+            score = self.distanceScore(row[1])
+        
+        elif self.layerName == "DWQAssessmentUnits":
+            status = str(row[1])
+            val = status
+            if status == "Fully Supporting":
+                score = 2
+            elif status == "Impaired" or status == "Not Assessed":
+                score = 5
+        
+        elif self.layerName == "Soils":
+            texture = row[1]
+            val = texture
+        
+        elif self.layerName == "ShallowGroundWater":
+            depth = row[1]
+            val = depth
+
+        
+        elif self.layerName == "CensusTracts2010":
+            popDensity = float(row[1])/float(row[2])
+            val = popDensity
+            if popDensity > 0.00181:
+                score = 5
+            elif popDensity > 0.00108:
+                score = 4
+            elif popDensity > .0000274:
+                score = 3
+            elif popDensity > 0.00000723:
+                score = 2
+            elif popDensity > 0.0:
+                score = 1
+            else:
+                score = 0
+        
+        return (val, score)
+
+    def inPolygonValAndScore(self, distance):
+        val = None
+        score = None
+        if distance == 0:
+            val = 1
+            score = 5
+        else:
+            val = 0
+            score = 5
+        return (val, score)
+    
+    def distanceScore(self, distance):
+        dist = float(distance)
+        score = None
+        if dist > 332:
+            score = 1
+        elif dist > 192:
+            score = 2
+        elif dist > 114:
+            score = 3
+        elif dist > 57:
+            score = 4
+        elif dist <= 56 and dist >= 0:
+            score = 5
+        else:
+            score = 0
+        
+        return score
+            
         
 class InPolygonFeature (RiskFeature):
         
@@ -73,12 +188,8 @@ class InPolygonFeature (RiskFeature):
         with arcpy.da.SearchCursor(in_table = self.nearTablePath, 
                            field_names = [self.nearTankIDField, self.nearDistField]) as cursor:
             for row in cursor:
-                nearDistance = row[1]
                 tankId = row[0]
-                if nearDistance == 0:
-                    self.tankResults[tankId] = 1#Tank point is in risk polygon
-                else:
-                    self.tankResults[tankId] = 0
+                self.tankResults[tankId] = self.getLayerValAndScore(row)
         
         return self.tankResults
         
@@ -88,10 +199,9 @@ class DistanceFeature (RiskFeature):
     def getTankResults(self):
         with arcpy.da.SearchCursor(in_table = self.nearTablePath, 
                            field_names = [self.nearTankIDField, self.nearDistField]) as cursor:
-            nearDistance = row[1]
-            tankId = row[0]
             for row in cursor:
-                self.tankResults[tankId] = nearDistance
+                tankId = row[0]
+                self.tankResults[tankId] = self.getLayerValAndScore(row)
         
         return self.tankResults
 
@@ -110,8 +220,9 @@ class AttributeFeature (RiskFeature):
         with arcpy.da.SearchCursor(in_table = self.nearTablePath, 
                            field_names = fields) as cursor:
             for row in cursor:
-                self.tankResults[row[0]] = [value for value in row[1:]]
-        
+                self.tankResults[row[0]] = self.getLayerValAndScore(row)#[value for value in row[1:]]
+            
+            
         return self.tankResults
     
 
@@ -151,7 +262,7 @@ class TankRisk(object):
         pass
         
     def start(self):
-        tankPoints = r"Database Connections\agrc@SGID10@gdb10.agrc.utah.sde\SGID10.ENVIRONMENT.FACILITYUST" 
+        tankPoints = r"Database Connections\agrc@SGID10@gdb10.agrc.utah.gov.sde\SGID10.ENVIRONMENT.FACILITYUST" 
         riskFeatures = MapSource().getSelectedlayers()
         print riskFeatures
         arcpy.CreateFileGDB_management(Outputs.outputDirectory, Outputs.outputGdbName)
@@ -164,13 +275,15 @@ class TankRisk(object):
             if type(rf) == "InPolygonFeature":
                 pass
                 
-            for r in results:
-                print "{}: {}".format(r, results[r])
-            break        
+#             for r in results:
+#                 print "{}: {}".format(r, results[r])
+#             break        
         
 
 if __name__ == '__main__':
-
+    
+    startTime = time.time()
     tankRiskAssessor = TankRisk()
     tankRiskAssessor.start()
+    print time.time() - startTime
  

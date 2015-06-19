@@ -22,21 +22,24 @@ class MapSource(object):
 
 
 class Outputs(object):
-    outputDirectory = r"..\data\ouputs"
+    outputDirectory = r"..\data\outputs"
     outputGdbName =  "nears_{}.gdb".format(time.strftime("%Y%m%d%H%M%S"))
     outputGdb = os.path.join(outputDirectory, outputGdbName)
     
 class LayerAttributes(object):       
-    def __init__(self, type, valAttribute, sevAttribute, valFieldName, sevFieldName, calcFields = None):
+    def __init__(self, type, valAttribute, sevAttribute, valFieldName, sevFieldName, calcFields = None, valMethod = None):
         self.type = type
         self.valAttribute = valAttribute
         self.sevAttribute = sevAttribute
         self.valFieldName = valFieldName
         self.sevFieldName = sevFieldName
         self.calcFields = calcFields
+        self.valMethod = valMethod
     
         
 class LayerConstants(object):
+
+        
     IN_POLYGON = "inPolygon"
     DISTANCE = "distance"
     ATTRIBUTE = "attribute"
@@ -55,20 +58,28 @@ class LayerConstants(object):
                     "DWQAssessmentUnits": LayerAttributes(ATTRIBUTE,
                                                            "assessmentVal", "assessmentSev",
                                                            "assessmentVal", "assessmentSev",
-                                                           "STATUS2006"), 
+                                                           ["STATUS2006"]), 
                     "Soils": LayerAttributes(ATTRIBUTE,
                                                "soilVal", "soilSev",
                                                "soilVal", "soilSev",
-                                               "TEX_DEF"), 
+                                               ["TEX_DEF"]), 
                     "ShallowGroundWater": LayerAttributes(ATTRIBUTE,
                                                          "shallowWaterVal", "shallowWaterSev",
                                                          "shallowWaterVal", "shallowWaterSev",
-                                                         "DEPTH"), 
+                                                         ["DEPTH"]), 
                     "CensusTracts2010":LayerAttributes(ATTRIBUTE,
                                                       "censusVal", "censusSev",
                                                       "censusVal", "censusSev",
                                                       ["POP100", "AREALAND"])
                   }
+    
+    @staticmethod
+    def getCensusValsAndScores(row):
+        val = row[1]/row[2]
+        score = val * 2
+        return (val, score)
+    
+
     
 
 
