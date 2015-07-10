@@ -3,7 +3,7 @@ Created on May 22, 2015
 
 @author: kwalker
 '''
-import arcpy, os, time
+import arcpy, os, time, csv
 from configs import *
 
 class TankResult(object):
@@ -36,12 +36,6 @@ class TankResult(object):
         self.censusDensity = None
         self.censusSeverity = None
         
-    def populateFieldsForRiskFeature(self, featureName, value, severity):
-        if featureName == "Aquifer_RechargeDischargeAreas":
-            self.aquiferSeverity = severity
-        
-    def getResultTableRow(self):
-        pass
 
 class RiskFeature(object):
     IN_POLYGON = "inPolygon"
@@ -160,7 +154,7 @@ class RiskFeature(object):
             score = 5
         else:
             val = 0
-            score = 5
+            score = 0
         return (val, score)
     
     def distanceScore(self, distance):
@@ -230,54 +224,50 @@ class AttributeFeature (RiskFeature):
 
 class TankRisk(object):
     def __init__(self):
-        
-        self.inPolygonLayers = ["Aquifer_RechargeDischargeAreas", "Wetlands",]
-        self.distanceLayers = ["LakesNHDHighRes", "StreamsNHDHighRes", ]
-        self.attributeLayers = {"DWQAssessmentUnits":"STATUS2006", "Soils":"TEX_DEF", 
-                                "ShallowGroundWater":"DEPTH", "CensusTracts2010":["POP100", "AREALAND"]}
         self.tankResults = {}
- 
-    def inPolygonProcessing(self, results):
-        for tankId in results:
-            if tankId not in self.tankResults:
-                self.tankResults[tankId] = TankResult(tankId)
-            
-            self.tankResults[tankId]
-    def censusProcessing(self, results):
-        for tankId in results:
-            popDensity = int(results[tankId][0])/int(results[tankId][0])
-            results[tankId] = popDensity
-        
-        pass
+        self.outputFields = []
+
     def riskFeatureFactory(self, riskFeature):
         featureName = riskFeature.split(".")[-1]
-        if LayerConstants.layerNames[featureName].type == LayerConstants.IN_POLYGON:
-            return InPolygonFeature(riskFeature, featureName, Outputs.outputGdb)
-        elif LayerConstants.layerNames[featureName].type == LayerConstants.DISTANCE:
-            return DistanceFeature(riskFeature, featureName, Outputs.outputGdb)
-        elif LayerConstants.layerNames[featureName].type == LayerConstants.ATTRIBUTE:
-            return AttributeFeature(riskFeature, featureName, Outputs.outputGdb, LayerConstants.layerNames[featureName].calcFields)
+        if RiskFeature.layerNames[featureName].type == RiskFeature.IN_POLYGON:
+            return InPolygonFeature(riskFeature, featureName, Outputs.tempGdb)
+        elif RiskFeature.layerNames[featureName].type == RiskFeature.DISTANCE:
+            return DistanceFeature(riskFeature, featureName, Outputs.tempGdb)
+        elif RiskFeature.layerNames[featureName].type == RiskFeature.ATTRIBUTE:
+            return AttributeFeature(riskFeature, featureName, Outputs.tempGdb, RiskFeature.layerNames[featureName].calcFields)
         else:
             print "Unkown layer error"
         pass
+    
+    def createOutputTable(self):
+        outputDir = Outputs.outputDirectory
+        arcpy.CreateFileGDB_management(Outputs.outputDirectory, Outputs.outputGdbName)
+        with open(os.path.join(outputDir, Outputs.tempCsv), "wb") as outCsv:
+            csvWriter = csv.writer(outCsv)
+            csvWriter.writerow(self.outputFields) 
+            csvWriter.writerows(self.tankResults.values())
         
     def start(self):
-        tankPoints = r"Database Connections\agrc@SGID10@gdb10.agrc.utah.gov.sde\SGID10.ENVIRONMENT.FACILITYUST" 
-        riskFeatures = MapSource().getSelectedlayers()
+        mapDoc = MapSource()
+        tankPoints = mapDoc.tankPoints
+        self.outputFields.append("TankId") 
+        riskFeatures = mapDoc.getSelectedlayers()
         print riskFeatures
-        arcpy.CreateFileGDB_management(Outputs.outputDirectory, Outputs.outputGdbName)
+        arcpy.CreateFileGDB_management(Outputs.outputDirectory, Outputs.tempGdbName)
         
         for riskFeature in riskFeatures:
             rf = self.riskFeatureFactory(riskFeature)
             print type(rf)
             rf.createNearTable(tankPoints)
             results = rf.getTankResults()
-            if type(rf) == "InPolygonFeature":
-                pass
-                
-#             for r in results:
-#                 print "{}: {}".format(r, results[r])
-#             break        
+            self.outputFields.append(RiskFeature.layerNames[rf.layerName].valFieldName)
+            self.outputFields.append(RiskFeature.layerNames[rf.layerName].sevFieldName)
+            for tankId in results:
+                if tankId not in self.tankResults:
+                    self.tankResults[tankId] = [tankId]
+                self.tankResults[tankId].extend(results[tankId])
+        
+        self.createOutputTable()
         
 
 if __name__ == '__main__':

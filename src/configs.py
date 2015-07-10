@@ -9,6 +9,7 @@ class MapSource(object):
     
     
     def __init__(self):
+        self.tankPoints = r"Database Connections\agrc@SGID10@gdb10.agrc.utah.sde\SGID10.ENVIRONMENT.FACILITYUST"
         pass
     
     def getSelectedlayers(self):
@@ -23,8 +24,14 @@ class MapSource(object):
 
 class Outputs(object):
     outputDirectory = r"..\data\outputs"
-    outputGdbName =  "nears_{}.gdb".format(time.strftime("%Y%m%d%H%M%S"))
-    outputGdb = os.path.join(outputDirectory, outputGdbName)
+    uniqueTimeString = time.strftime("%Y%m%d%H%M%S")
+    
+    outputGdbName = "TankRisk_{}.gdb".format(uniqueTimeString)
+    os.path.join(outputDirectory, outputGdbName)
+    
+    tempGdbName =  "nears_{}.gdb".format(uniqueTimeString)
+    tempGdb = os.path.join(outputDirectory, tempGdbName)
+    tempCsv = "tempCsv_{}.csv".format(uniqueTimeString)
     
 class LayerAttributes(object):       
     def __init__(self, type, valAttribute, sevAttribute, valFieldName, sevFieldName, calcFields = None, valMethod = None):
@@ -37,47 +44,47 @@ class LayerAttributes(object):
         self.valMethod = valMethod
     
         
-class LayerConstants(object):
-
-        
-    IN_POLYGON = "inPolygon"
-    DISTANCE = "distance"
-    ATTRIBUTE = "attribute"
-    layerNames = {"Aquifer_RechargeDischargeAreas": LayerAttributes(IN_POLYGON, 
-                                                                 "aquiferVal", "aquiferSev", 
-                                                                 "aquiferVal", "aquiferSev"),
-                    "Wetlands": LayerAttributes(IN_POLYGON,
-                                               "wetLandsVal", "wetLandsSev",
-                                               "wetLandsVal", "wetLandsSev"),
-                    "LakesNHDHighRes": LayerAttributes(DISTANCE ,
-                                                      "lakesVal", "lakeSev",
-                                                      "lakesVal", "lakeSev"), 
-                    "StreamsNHDHighRes": LayerAttributes(DISTANCE ,
-                                                        "streamsVal", "streamsSev",
-                                                        "streamsVal", "streamsSev"),
-                    "DWQAssessmentUnits": LayerAttributes(ATTRIBUTE,
-                                                           "assessmentVal", "assessmentSev",
-                                                           "assessmentVal", "assessmentSev",
-                                                           ["STATUS2006"]), 
-                    "Soils": LayerAttributes(ATTRIBUTE,
-                                               "soilVal", "soilSev",
-                                               "soilVal", "soilSev",
-                                               ["TEX_DEF"]), 
-                    "ShallowGroundWater": LayerAttributes(ATTRIBUTE,
-                                                         "shallowWaterVal", "shallowWaterSev",
-                                                         "shallowWaterVal", "shallowWaterSev",
-                                                         ["DEPTH"]), 
-                    "CensusTracts2010":LayerAttributes(ATTRIBUTE,
-                                                      "censusVal", "censusSev",
-                                                      "censusVal", "censusSev",
-                                                      ["POP100", "AREALAND"])
-                  }
-    
-    @staticmethod
-    def getCensusValsAndScores(row):
-        val = row[1]/row[2]
-        score = val * 2
-        return (val, score)
+# class LayerConstants(object):
+# 
+#         
+#     IN_POLYGON = "inPolygon"
+#     DISTANCE = "distance"
+#     ATTRIBUTE = "attribute"
+#     layerNames = {"Aquifer_RechargeDischargeAreas": LayerAttributes(IN_POLYGON, 
+#                                                                  "aquiferVal", "aquiferSev", 
+#                                                                  "aquiferVal", "aquiferSev"),
+#                     "Wetlands": LayerAttributes(IN_POLYGON,
+#                                                "wetLandsVal", "wetLandsSev",
+#                                                "wetLandsVal", "wetLandsSev"),
+#                     "LakesNHDHighRes": LayerAttributes(DISTANCE ,
+#                                                       "lakesVal", "lakeSev",
+#                                                       "lakesVal", "lakeSev"), 
+#                     "StreamsNHDHighRes": LayerAttributes(DISTANCE ,
+#                                                         "streamsVal", "streamsSev",
+#                                                         "streamsVal", "streamsSev"),
+#                     "DWQAssessmentUnits": LayerAttributes(ATTRIBUTE,
+#                                                            "assessmentVal", "assessmentSev",
+#                                                            "assessmentVal", "assessmentSev",
+#                                                            ["STATUS2006"]), 
+#                     "Soils": LayerAttributes(ATTRIBUTE,
+#                                                "soilVal", "soilSev",
+#                                                "soilVal", "soilSev",
+#                                                ["TEX_DEF"]), 
+#                     "ShallowGroundWater": LayerAttributes(ATTRIBUTE,
+#                                                          "shallowWaterVal", "shallowWaterSev",
+#                                                          "shallowWaterVal", "shallowWaterSev",
+#                                                          ["DEPTH"]), 
+#                     "CensusTracts2010":LayerAttributes(ATTRIBUTE,
+#                                                       "censusVal", "censusSev",
+#                                                       "censusVal", "censusSev",
+#                                                       ["POP100", "AREALAND"])
+#                   }
+#     
+#     @staticmethod
+#     def getCensusValsAndScores(row):
+#         val = row[1]/row[2]
+#         score = val * 2
+#         return (val, score)
     
 
     
