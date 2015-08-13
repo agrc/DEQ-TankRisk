@@ -8,18 +8,35 @@ import arcpy, os, time
 class MapSource(object):
     
     
-    def __init__(self):
-        self.tankPoints = r"Database Connections\agrc@SGID10@gdb10.agrc.utah.sde\SGID10.ENVIRONMENT.FACILITYUST"
+    def __init__(self, tankPoints, mapDocument):
+        self.tankPoints = tankPoints#r"Database Connections\agrc@SGID10@gdb10.agrc.utah.sde\SGID10.ENVIRONMENT.FACILITYUST"
+        self.mapDoc = mapDocument
         pass
     
     def getSelectedlayers(self):
-        mxd = arcpy.mapping.MapDocument(r"..\data\test_map.mxd")
+        mxd = arcpy.mapping.MapDocument(self.mapDoc)
         layerPaths = []
         for layer in arcpy.mapping.ListLayers(mxd):
             if layer.visible:
                 layerPaths.append(layer.dataSource)
         del mxd
         return list(layerPaths)
+
+# class MapSource(object):
+#     
+#     
+#     def __init__(self):
+#         self.tankPoints = r"Database Connections\agrc@SGID10@gdb10.agrc.utah.sde\SGID10.ENVIRONMENT.FACILITYUST"
+#         pass
+#     
+#     def getSelectedlayers(self):
+#         mxd = arcpy.mapping.MapDocument(r"..\data\test_map.mxd")
+#         layerPaths = []
+#         for layer in arcpy.mapping.ListLayers(mxd):
+#             if layer.visible:
+#                 layerPaths.append(layer.dataSource)
+#         del mxd
+#         return list(layerPaths)
 
 
 class Outputs(object):
@@ -43,54 +60,7 @@ class LayerAttributes(object):
         self.calcFields = calcFields
         self.valMethod = valMethod
     
-        
-# class LayerConstants(object):
-# 
-#         
-#     IN_POLYGON = "inPolygon"
-#     DISTANCE = "distance"
-#     ATTRIBUTE = "attribute"
-#     layerNames = {"Aquifer_RechargeDischargeAreas": LayerAttributes(IN_POLYGON, 
-#                                                                  "aquiferVal", "aquiferSev", 
-#                                                                  "aquiferVal", "aquiferSev"),
-#                     "Wetlands": LayerAttributes(IN_POLYGON,
-#                                                "wetLandsVal", "wetLandsSev",
-#                                                "wetLandsVal", "wetLandsSev"),
-#                     "LakesNHDHighRes": LayerAttributes(DISTANCE ,
-#                                                       "lakesVal", "lakeSev",
-#                                                       "lakesVal", "lakeSev"), 
-#                     "StreamsNHDHighRes": LayerAttributes(DISTANCE ,
-#                                                         "streamsVal", "streamsSev",
-#                                                         "streamsVal", "streamsSev"),
-#                     "DWQAssessmentUnits": LayerAttributes(ATTRIBUTE,
-#                                                            "assessmentVal", "assessmentSev",
-#                                                            "assessmentVal", "assessmentSev",
-#                                                            ["STATUS2006"]), 
-#                     "Soils": LayerAttributes(ATTRIBUTE,
-#                                                "soilVal", "soilSev",
-#                                                "soilVal", "soilSev",
-#                                                ["TEX_DEF"]), 
-#                     "ShallowGroundWater": LayerAttributes(ATTRIBUTE,
-#                                                          "shallowWaterVal", "shallowWaterSev",
-#                                                          "shallowWaterVal", "shallowWaterSev",
-#                                                          ["DEPTH"]), 
-#                     "CensusTracts2010":LayerAttributes(ATTRIBUTE,
-#                                                       "censusVal", "censusSev",
-#                                                       "censusVal", "censusSev",
-#                                                       ["POP100", "AREALAND"])
-#                   }
-#     
-#     @staticmethod
-#     def getCensusValsAndScores(row):
-#         val = row[1]/row[2]
-#         score = val * 2
-#         return (val, score)
     
-
-    
-
-
-
 
 
 
