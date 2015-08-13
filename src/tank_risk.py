@@ -4,13 +4,12 @@ Created on May 22, 2015
 @author: kwalker
 '''
 import arcpy, os, time, csv
-#from configs import *
+
 
 class MapSource(object):
-     
-     
+       
     def __init__(self, tankPoints, mapDocument):
-        self.tankPoints = tankPoints#r"Database Connections\agrc@SGID10@gdb10.agrc.utah.sde\SGID10.ENVIRONMENT.FACILITYUST"
+        self.tankPoints = tankPoints
         self.mapDoc = mapDocument
         pass
      
@@ -22,18 +21,38 @@ class MapSource(object):
                 layerPaths.append(layer.dataSource)
         del mxd
         return list(layerPaths)
- 
+    
+                
+    def addLayerToMap(self, layerPath):
+        mxd = arcpy.mapping.MapDocument(self.mapDoc)
+        df = arcpy.mapping.ListDataFrames(mxd,"*")[0]
+        newLayer = arcpy.mapping.Layer(layerPath)
+        arcpy.mapping.AddLayer(df, newLayer,"BOTTOM")
+        del mxd
+        del df
+        del newLayer                  
  
 class Outputs(object):
-    outputDirectory = r"..\data\outputs"
+    outputDirectory = "../data/outputs"
     uniqueTimeString = time.strftime("%Y%m%d%H%M%S")
      
     outputGdbName = "TankRisk_{}.gdb".format(uniqueTimeString)
-    os.path.join(outputDirectory, outputGdbName)
+    outputGdb = os.path.join(outputDirectory, outputGdbName)
      
     tempGdbName =  "nears_{}.gdb".format(uniqueTimeString)
     tempGdb = os.path.join(outputDirectory, tempGdbName)
     tempCsv = "TankRiskResults_{}.csv".format(uniqueTimeString)
+    
+    @staticmethod
+    def setOutputDirectory(outputDir):
+        Outputs.outputDirectory = outputDir
+        Outputs.outputGdbName = "TankRisk_{}.gdb".format(Outputs.uniqueTimeString)
+        Outputs.outputGdb = os.path.join(Outputs.outputDirectory, Outputs.outputGdbName)
+        
+        Outputs.tempGdbName =  "nears_{}.gdb".format(Outputs.uniqueTimeString)
+        Outputs.tempGdb = os.path.join(Outputs.outputDirectory, Outputs.tempGdbName)
+        Outputs.tempCsv = "TankRiskResults_{}.csv".format(Outputs.uniqueTimeString)
+    
      
 class LayerAttributes(object):       
     def __init__(self, type, valAttribute, sevAttribute, valFieldName, sevFieldName, calcFields = None, valMethod = None):
@@ -89,8 +108,10 @@ class TankResult(object):
                     "SurfaceWaterZones":LayerAttributes(ATTRIBUTE,
                                                       "udwspzVal", "udwspzSev",
                                                       "udwspzVal", "udwspzSev",
-                                                      ["ProtZone"])                  
-                
+                                                      ["ProtZone"]),
+                  "PointsOfDiversion": LayerAttributes(DISTANCE, 
+                                                                 "podVal", "podSev", 
+                                                                 "podVal", "podSev")
                   }
     
     def __init__(self, tankId):
@@ -119,18 +140,14 @@ class TankResult(object):
         self.lakeSev = None
         self.udwspzVal = None
         self.udwspzSev = None
+        self.podVal = None
+        self.podSev = None
 
-    def getOutputHeader(self):
-        fieldDict = self.__dict__
-        outputHeader = []
-        for f in fieldDict:
-            if fieldDict[f] != None:
-                outputHeader.append(f)
-                
-        return outputHeader
     
     @staticmethod     
     def getOutputRows (featureNames):
+        """Get a list that contains the rows of the output table, including header.
+        - featureNames are used to order output table fields."""
         outputRows = []
         featureNameRowOrder = list(featureNames)
         headerList = [TankResult.OUTPUT_ID_FIELD]
@@ -155,10 +172,13 @@ class TankResult(object):
 
 
     @staticmethod
-    def getLayerValAndScore(row, layerName):
+    def updateTankValAndScore(row, layerName):
+        """Update the TankResult object for the tankId contained in row parameter.
+        -The items row contains are dependent on the particular layerName and type of RiskFeature."""
         val = 0
         score = 0
         tankId = row[0]
+        #Get the result object for the current tankId.
         if tankId not in TankResult.tankResults:
                 TankResult.tankResults[tankId] = TankResult(tankId)
         tankResultRef = TankResult.tankResults[tankId]
@@ -255,8 +275,15 @@ class TankResult(object):
             if tankResultRef.udwspzSev < score:
                 tankResultRef.udwspzVal = val
                 tankResultRef.udwspzSev = score
-        
+                
+        elif layerName == "PointsOfDiversion":
+            val = row[1]
+            score = TankResult.distanceScore(row[1])
+            tankResultRef.podVal = val
+            tankResultRef.podSev = score
+            
         return (val, score)
+    
     
     @staticmethod
     def inPolygonValAndScore(distance):
@@ -316,27 +343,23 @@ class RiskFeature(object):
         
 class InPolygonFeature (RiskFeature):
         
-    def getTankResults(self):
+    def updateTankResults(self):
         with arcpy.da.SearchCursor(in_table = self.nearTablePath, 
                            field_names = [self.nearTankIDField, self.nearDistField]) as cursor:
             for row in cursor:
                 tankId = row[0]
-                TankResult.getLayerValAndScore(row, self.layerName)
-        
-#         return self.tankResults
+                TankResult.updateTankValAndScore(row, self.layerName)
         
         
 class DistanceFeature (RiskFeature):
         
-    def getTankResults(self):
+    def updateTankResults(self):
         with arcpy.da.SearchCursor(in_table = self.nearTablePath, 
                            field_names = [self.nearTankIDField, self.nearDistField]) as cursor:
             for row in cursor:
                 tankId = row[0]
-                TankResult.getLayerValAndScore(row, self.layerName)
+                TankResult.updateTankValAndScore(row, self.layerName)
         
-        
-        #return self.tankResults
 
 class AttributeFeature (RiskFeature):
     multiFeatureValues = {}
@@ -344,7 +367,7 @@ class AttributeFeature (RiskFeature):
         super(AttributeFeature, self).__init__(featurePath, featureName, outputGdb)
         self.attributeFields = attributeFields
     
-    def getTankResults(self):
+    def updateTankResults(self):
         arcpy.JoinField_management(self.nearTablePath, self.nearRiskIdField, 
                                    self.layerPath, arcpy.Describe(self.layerPath).OIDFieldName, self.attributeFields)
         
@@ -354,15 +377,13 @@ class AttributeFeature (RiskFeature):
         with arcpy.da.SearchCursor(in_table = self.nearTablePath, 
                            field_names = fields) as cursor:
             for row in cursor:
-                TankResult.getLayerValAndScore(row, self.layerName)
+                TankResult.updateTankValAndScore(row, self.layerName)
 
 
 
 
 class TankRisk(object):
     def __init__(self):
-        self.tankResults = {}
-        self.outputFields = []
         self.riskFeatureNameOrder = []
         
     def parseName(self, riskFeature):
@@ -375,40 +396,48 @@ class TankRisk(object):
     
     def riskFeatureFactory(self, riskFeature):
         featureName = self.parseName(riskFeature)
-        self.riskFeatureNameOrder.append(featureName)
-        if TankResult.layerNames[featureName].type == TankResult.IN_POLYGON:
+        if featureName not in TankResult.layerNames:
+            return None
+        elif TankResult.layerNames[featureName].type == TankResult.IN_POLYGON:
+            self.riskFeatureNameOrder.append(featureName)
             return InPolygonFeature(riskFeature, featureName, Outputs.tempGdb)
         elif TankResult.layerNames[featureName].type == TankResult.DISTANCE:
+            self.riskFeatureNameOrder.append(featureName)
             return DistanceFeature(riskFeature, featureName, Outputs.tempGdb)
         elif TankResult.layerNames[featureName].type == TankResult.ATTRIBUTE:
+            self.riskFeatureNameOrder.append(featureName)
             return AttributeFeature(riskFeature, featureName, Outputs.tempGdb, TankResult.layerNames[featureName].calcFields)
-        else:
-            print "Unkown layer error"
-        pass
     
     def createOutputTable(self, resultRows):
-        outputDir = Outputs.outputDirectory
         arcpy.CreateFileGDB_management(Outputs.outputDirectory, Outputs.outputGdbName)
-        with open(os.path.join(outputDir, Outputs.tempCsv), "wb") as outCsv:
+        with open(os.path.join(Outputs.outputDirectory, Outputs.tempCsv), "wb") as outCsv:
             csvWriter = csv.writer(outCsv)
             csvWriter.writerows(resultRows)
+
+        
         
     def start(self, tankPoints, mapDocument):
         mapDoc = MapSource(tankPoints, mapDocument)
         tankPoints = mapDoc.tankPoints
-        self.outputFields.append("TankId") 
         riskFeatures = mapDoc.getSelectedlayers()
         print riskFeatures
         arcpy.CreateFileGDB_management(Outputs.outputDirectory, Outputs.tempGdbName)
         
         for riskFeature in riskFeatures:
+            rfStartTime = time.time()
             print riskFeature
+            RFName = self.parseName(riskFeature)
+            arcpy.AddMessage("Processing: {}".format(RFName))
             rf = self.riskFeatureFactory(riskFeature)
-            print "factory"
+            if rf == None:
+                print "Unkown layer error"
+                arcpy.AddWarning("Unkown risk layer: {}".format(self.parseName(RFName)))
+                continue
+                
             rf.createNearTable(tankPoints)
-            print "near"
             resultTime = time.time()
-            rf.getTankResults()
+            rf.updateTankResults()
+            arcpy.AddMessage("  -Completed: {} Time: {}".format(RFName, time.time() - rfStartTime))
             print "results: {}".format(time.time() - resultTime)
             
         resultRows = TankResult.getOutputRows(self.riskFeatureNameOrder)
@@ -425,9 +454,8 @@ if __name__ == '__main__':
     else:
         mapDoc = "CURRENT"
         facilityUstTankPoints = arcpy.GetParameterAsText(0)
-        outputDir = arcpy.GetParameterAsText(1)
+        Outputs.setOutputDirectory(arcpy.GetParameterAsText(1))
         
-#     outputFileName = "mapservGeocodeResults_" + time.strftime("%Y%m%d%H%M%S") + ".csv"
     
     startTime = time.time()
     tankRiskAssessor = TankRisk()
