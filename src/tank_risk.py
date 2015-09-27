@@ -109,9 +109,9 @@ class TankResult(object):
                                                       "udwspzVal", "udwspzSev",
                                                       "udwspzVal", "udwspzSev",
                                                       ["ProtZone"]),
-                  "PointsOfDiversion": LayerAttributes(DISTANCE, 
-                                                                 "podVal", "podSev", 
-                                                                 "podVal", "podSev")
+                  "wrpod": LayerAttributes(DISTANCE,                #Also known as PointsOfDiversion
+                                                 "podVal", "podSev", 
+                                                 "podVal", "podSev")
                   }
     
     def __init__(self, tankId):
@@ -420,13 +420,15 @@ class TankRisk(object):
         mapDoc = MapSource(tankPoints, mapDocument)
         tankPoints = mapDoc.tankPoints
         riskFeatures = mapDoc.getSelectedlayers()
-        print riskFeatures
+        tankPointsName = self.parseName(tankPoints)
         arcpy.CreateFileGDB_management(Outputs.outputDirectory, Outputs.tempGdbName)
         
         for riskFeature in riskFeatures:
             rfStartTime = time.time()
             print riskFeature
             RFName = self.parseName(riskFeature)
+            if RFName == self.parseName(tankPoints):# Tank points are not a risk feature.
+                continue
             arcpy.AddMessage("Processing: {}".format(RFName))
             rf = self.riskFeatureFactory(riskFeature)
             if rf == None:
@@ -445,7 +447,7 @@ class TankRisk(object):
         
 
 if __name__ == '__main__':
-    testing = False
+    testing = True
 
     if testing:
         mapDoc = r"..\data\test_map.mxd"
