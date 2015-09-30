@@ -109,9 +109,9 @@ class TankResult(object):
                                                       "udwspzVal", "udwspzSev",
                                                       "udwspzVal", "udwspzSev",
                                                       ["ProtZone"]),
-                  "PointsOfDiversion": LayerAttributes(DISTANCE, 
-                                                                 "podVal", "podSev", 
-                                                                 "podVal", "podSev")
+                  "wrpod": LayerAttributes(DISTANCE,                #Also known as PointsOfDiversion
+                                                 "podVal", "podSev", 
+                                                 "podVal", "podSev")
                   }
     
     def __init__(self, tankId):
@@ -149,21 +149,24 @@ class TankResult(object):
         """Get a list that contains the rows of the output table, including header.
         - featureNames are used to order output table fields."""
         outputRows = []
-        featureNameRowOrder = list(featureNames)
+        featureNameOrder_Header = list(featureNames)
+        featureNamesOrder_Values = []
+        
         headerList = [TankResult.OUTPUT_ID_FIELD]
-        for f in featureNameRowOrder:
+        for f in featureNameOrder_Header:
             valFieldName = TankResult.layerNames[f].valFieldName
             sevFieldName = TankResult.layerNames[f].sevFieldName
             if valFieldName in headerList or sevFieldName in headerList:
-                featureNameRowOrder.remove(f)#Two layers can share one output field and the field doesn't need to be added to twice.
-                continue
+                continue#Two layers can share one output field and the field doesn't need to be added to twice.
+            featureNamesOrder_Values.append(f)#Make a list without shared outputs for value adding efficiency
             headerList.append(valFieldName)
             headerList.append(sevFieldName)
+
         outputRows.append(headerList)
-            
+                    
         for t in TankResult.tankResults.values():
             tempValueList = [t.tankId]
-            for f in featureNameRowOrder:
+            for f in featureNamesOrder_Values:
                 tempValueList.append(t.__getattribute__(TankResult.layerNames[f].valAttribute))
                 tempValueList.append(t.__getattribute__(TankResult.layerNames[f].sevAttribute))
             outputRows.append(tempValueList)
@@ -420,13 +423,15 @@ class TankRisk(object):
         mapDoc = MapSource(tankPoints, mapDocument)
         tankPoints = mapDoc.tankPoints
         riskFeatures = mapDoc.getSelectedlayers()
-        print riskFeatures
+        tankPointsName = self.parseName(tankPoints)
         arcpy.CreateFileGDB_management(Outputs.outputDirectory, Outputs.tempGdbName)
         
         for riskFeature in riskFeatures:
             rfStartTime = time.time()
             print riskFeature
             RFName = self.parseName(riskFeature)
+            if RFName == self.parseName(tankPoints):# Tank points are not a risk feature.
+                continue
             arcpy.AddMessage("Processing: {}".format(RFName))
             rf = self.riskFeatureFactory(riskFeature)
             if rf == None:
@@ -445,7 +450,7 @@ class TankRisk(object):
         
 
 if __name__ == '__main__':
-    testing = False
+    testing = True
 
     if testing:
         mapDoc = r"..\data\test_map.mxd"
