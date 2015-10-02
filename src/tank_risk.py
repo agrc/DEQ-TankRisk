@@ -450,7 +450,7 @@ class TankRisk(object):
         
 
 if __name__ == '__main__':
-    testing = True
+    testing = False
 
     if testing:
         mapDoc = r"..\data\test_map.mxd"
