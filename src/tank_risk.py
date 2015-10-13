@@ -1,6 +1,7 @@
 '''
-Created on May 22, 2015
+ArcGIS script tool for evaluating tank risk based on spatial relationships to other data.
 
+Created on May 22, 2015\
 @author: kwalker
 '''
 import arcpy, os, time, csv
@@ -38,10 +39,13 @@ class Outputs(object):
      
     outputGdbName = "TankRisk_{}.gdb".format(uniqueTimeString)
     outputGdb = os.path.join(outputDirectory, outputGdbName)
-     
-    tempGdbName =  "nears_{}.gdb".format(uniqueTimeString)
+    outputTableName = "TankRiskResults_{}".format(uniqueTimeString)
+    
+    outputCsv = "TankRiskResults_{}.csv".format(uniqueTimeString)
+    
+    tempGdbName =  "nearsTemp_{}.gdb".format(uniqueTimeString)
     tempGdb = os.path.join(outputDirectory, tempGdbName)
-    tempCsv = "TankRiskResults_{}.csv".format(uniqueTimeString)
+    
     
     @staticmethod
     def setOutputDirectory(outputDir):
@@ -49,9 +53,11 @@ class Outputs(object):
         Outputs.outputGdbName = "TankRisk_{}.gdb".format(Outputs.uniqueTimeString)
         Outputs.outputGdb = os.path.join(Outputs.outputDirectory, Outputs.outputGdbName)
         
-        Outputs.tempGdbName =  "nears_{}.gdb".format(Outputs.uniqueTimeString)
+        Outputs.outputCsv = "TankRiskResults_{}.csv".format(Outputs.uniqueTimeString)
+        
+        Outputs.tempGdbName =  "nearsTemp_{}.gdb".format(Outputs.uniqueTimeString)
         Outputs.tempGdb = os.path.join(Outputs.outputDirectory, Outputs.tempGdbName)
-        Outputs.tempCsv = "TankRiskResults_{}.csv".format(Outputs.uniqueTimeString)
+
     
      
 class LayerAttributes(object):       
@@ -399,23 +405,25 @@ class TankRisk(object):
     
     def riskFeatureFactory(self, riskFeature):
         featureName = self.parseName(riskFeature)
-        if featureName not in TankResult.layerNames:
-            return None
-        elif TankResult.layerNames[featureName].type == TankResult.IN_POLYGON:
-            self.riskFeatureNameOrder.append(featureName)
+        if TankResult.layerNames[featureName].type == TankResult.IN_POLYGON:
             return InPolygonFeature(riskFeature, featureName, Outputs.tempGdb)
         elif TankResult.layerNames[featureName].type == TankResult.DISTANCE:
-            self.riskFeatureNameOrder.append(featureName)
             return DistanceFeature(riskFeature, featureName, Outputs.tempGdb)
         elif TankResult.layerNames[featureName].type == TankResult.ATTRIBUTE:
-            self.riskFeatureNameOrder.append(featureName)
             return AttributeFeature(riskFeature, featureName, Outputs.tempGdb, TankResult.layerNames[featureName].calcFields)
+        else:# Feature not in TankResult.layerNames.
+            return None
     
     def createOutputTable(self, resultRows):
         arcpy.CreateFileGDB_management(Outputs.outputDirectory, Outputs.outputGdbName)
-        with open(os.path.join(Outputs.outputDirectory, Outputs.tempCsv), "wb") as outCsv:
+        with open(os.path.join(Outputs.outputDirectory, Outputs.outputCsv), "wb") as outCsv:
             csvWriter = csv.writer(outCsv)
             csvWriter.writerows(resultRows)
+        
+        arcpy.CopyRows_management(os.path.join(Outputs.outputDirectory, Outputs.outputCsv), 
+                                  os.path.join(Outputs.outputGdb, Outputs.outputTableName))
+            
+        
 
         
         
@@ -429,20 +437,27 @@ class TankRisk(object):
         for riskFeature in riskFeatures:
             rfStartTime = time.time()
             print riskFeature
-            RFName = self.parseName(riskFeature)
-            if RFName == self.parseName(tankPoints):# Tank points are not a risk feature.
+            
+            featureName = self.parseName(riskFeature)
+            if featureName == self.parseName(tankPoints):#Tank points are not a risk feature.
                 continue
-            arcpy.AddMessage("Processing: {}".format(RFName))
-            rf = self.riskFeatureFactory(riskFeature)
-            if rf == None:
+            if featureName not in TankResult.layerNames:#The riskFeatureFactory should not receive unkown layers.
                 print "Unkown layer error"
-                arcpy.AddWarning("Unkown risk layer: {}".format(self.parseName(RFName)))
+                arcpy.AddWarning("Unkown risk layer: {}".format(self.parseName(featureName)))
                 continue
+                    
+            arcpy.AddMessage("Processing: {}".format(featureName))
+            rf = self.riskFeatureFactory(riskFeature)
+            self.riskFeatureNameOrder.append(rf.layerName)#Keep track of name order for output field ordering.
+#             if rf == None:
+#                 print "Unkown layer error"
+#                 arcpy.AddWarning("Unkown risk layer: {}".format(self.parseName(featureName)))
+#                 continue
                 
             rf.createNearTable(tankPoints)
             resultTime = time.time()
             rf.updateTankResults()
-            arcpy.AddMessage("  -Completed: {} Time: {}".format(RFName, time.time() - rfStartTime))
+            arcpy.AddMessage("  -Completed: {} Time: {}".format(featureName, time.time() - rfStartTime))
             print "results: {}".format(time.time() - resultTime)
             
         resultRows = TankResult.getOutputRows(self.riskFeatureNameOrder)
