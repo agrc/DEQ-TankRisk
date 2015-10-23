@@ -295,7 +295,7 @@ class TankResult(object):
             if tankResultRef.udwspzSev < score:
                 tankResultRef.udwspzVal = val
                 tankResultRef.udwspzSev = score           
-        elif layerName == "PointsOfDiversion":
+        elif layerName == "wrpod":
             val = row[1]
             score = TankResult.distanceScore(row[1])
             tankResultRef.podVal = val
@@ -360,6 +360,7 @@ class RiskFeature(object):
         nearTime = time.time()
         arcpy.GenerateNearTable_analysis (inFeature, nearFeature, nearTable)
         print "Near_{}: {}".format(self.layerPath.split(".")[-1], time.time() - nearTime)
+        
         
         return nearTable
         
@@ -469,12 +470,11 @@ class TankRisk(object):
 
 if __name__ == '__main__':
     
-    version = "0.5.1"
+    version = "0.5.3"
     testing = False
-
     if testing:
         mapDoc = r"..\data\test_map.mxd"
-        facilityUstTankPoints = r"C:\GIS\Work\DEQ_TankRisk\FACILITYUST.gdb\FACILITYUST"
+        facilityUstTankPoints = r"C:\KW_Working\EnvTankSeverity\LocalFeaturesForTesting.gdb\FACILITYUST"
         outputDir = r"..\data\outputs"
     else:
         mapDoc = "CURRENT"
