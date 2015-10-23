@@ -348,6 +348,8 @@ class RiskFeature(object):
         self.nearDistField = "NEAR_DIST"
         self.nearTankIDField = "IN_FID"
         self.nearRiskIdField = "NEAR_FID"
+        self.tankObjectID = "OBJECTID"
+        self.tankFacilityID = "FACILITYID"
         self.outputGdb = outputGdb
         
     def createNearTable(self, tankPoints):
@@ -360,6 +362,7 @@ class RiskFeature(object):
         nearTime = time.time()
         arcpy.GenerateNearTable_analysis (inFeature, nearFeature, nearTable)
         print "Near_{}: {}".format(self.layerPath.split(".")[-1], time.time() - nearTime)
+        arcpy.JoinField_management(nearTable, self.nearTankIDField, tankPoints, self.tankObjectID, [self.tankFacilityID])
         
         
         return nearTable
@@ -369,7 +372,7 @@ class InPolygonFeature (RiskFeature):
     relationship."""
     def updateTankResults(self):
         with arcpy.da.SearchCursor(in_table = self.nearTablePath, 
-                           field_names = [self.nearTankIDField, self.nearDistField]) as cursor:
+                           field_names = [self.tankFacilityID, self.nearDistField]) as cursor:
             for row in cursor:
                 tankId = row[0]
                 TankResult.updateTankValAndScore(row, self.layerName)
@@ -380,7 +383,7 @@ class DistanceFeature (RiskFeature):
     another feature."""        
     def updateTankResults(self):
         with arcpy.da.SearchCursor(in_table = self.nearTablePath, 
-                           field_names = [self.nearTankIDField, self.nearDistField]) as cursor:
+                           field_names = [self.tankFacilityID, self.nearDistField]) as cursor:
             for row in cursor:
                 tankId = row[0]
                 TankResult.updateTankValAndScore(row, self.layerName)
@@ -397,7 +400,7 @@ class AttributeFeature (RiskFeature):
         arcpy.JoinField_management(self.nearTablePath, self.nearRiskIdField, 
                                    self.layerPath, arcpy.Describe(self.layerPath).OIDFieldName, self.attributeFields)
         
-        fields = [self.nearTankIDField]
+        fields = [self.tankFacilityID]
         fields.extend(self.attributeFields)#attribute fields are specific to each risk feature.
         fields.append(self.nearDistField)
         with arcpy.da.SearchCursor(in_table = self.nearTablePath, 
@@ -471,7 +474,7 @@ class TankRisk(object):
 if __name__ == '__main__':
     
     version = "0.5.3"
-    testing = False
+    testing = True
     if testing:
         mapDoc = r"..\data\test_map.mxd"
         facilityUstTankPoints = r"C:\KW_Working\EnvTankSeverity\LocalFeaturesForTesting.gdb\FACILITYUST"
