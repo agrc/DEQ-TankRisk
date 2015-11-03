@@ -31,6 +31,7 @@ class MapSource(object):
         del mxd
         del df
         del newLayer                  
+
  
 class Outputs(object):
     """Outputs stores all the directory and file name info.
@@ -63,7 +64,6 @@ class Outputs(object):
         Outputs.tempGdbName =  "nearsTemp_{}.gdb".format(Outputs.uniqueTimeString)
         Outputs.tempGdb = "in_memory" #os.path.join(tempDir, tempGdbName)
 
-    
      
 class LayerAttributes(object):
     """LayerAttributes stores risk feature information in a way that 
@@ -78,7 +78,6 @@ class LayerAttributes(object):
         self.valMethod = valMethod #Method to produce value. Not yet used.
     
 
-
 class TankResult(object):
     """Stores everything that is specific to each risk feature including:
     - Litterals (field names) 
@@ -88,7 +87,7 @@ class TankResult(object):
     IN_POLYGON = "inPolygon"
     DISTANCE = "distance"
     ATTRIBUTE = "attribute"
-    OUTPUT_ID_FIELD = "TankId"
+    OUTPUT_ID_FIELD = "FACILITYID"
     #attributesForFeature associates feature names with attributes
     attributesForFeature = {"Aquifer_RechargeDischargeAreas": LayerAttributes(ATTRIBUTE, 
                                                                  "aquiferVal", "aquiferSev", 
@@ -136,31 +135,21 @@ class TankResult(object):
         #FacilityUST OBJECTID
         self.tankId = tankId
         #Risk layer result attributes
-        self.shallowWaterVal = None
-        self.shallowWaterSev = None
-        self.soilVal = None
-        self.soilSev = None
-        self.wetLandsVal = None
-        self.wetLandsSev = None
-        self.aquiferVal = None
-        self.aquiferSev = None
-        self.surfaceWaterVal = None
-        self.surfaceWaterSev = None
-        self.groundWaterVal = None
-        self.groundWaterSev = None
-        self.assessmentVal = None
-        self.assessmentSev = None
-        self.censusVal = None
-        self.censusSev = None
-        self.streamsVal = None
-        self.streamsSev = None
-        self.lakesVal = None
-        self.lakeSev = None
-        self.udwspzVal = None
-        self.udwspzSev = None
-        self.podVal = None
-        self.podSev = None
+        for f in TankResult.attributesForFeature:
+            self.__dict__[TankResult.attributesForFeature[f].valAttribute] = None
+            self.__dict__[TankResult.attributesForFeature[f].sevAttribute] = None
 
+    def setValForLayer(self, layerName, val):
+        self.__dict__[TankResult.attributesForFeature[layerName].valAttribute] = val
+        
+    def getValForLayer(self, layerName):
+        return self.__dict__[TankResult.attributesForFeature[layerName].valAttribute]
+    
+    def setSevForLayer(self, layerName, sev):
+        self.__dict__[TankResult.attributesForFeature[layerName].sevAttribute] = sev
+        
+    def getSevForLayer(self, layerName):
+        return self.__dict__[TankResult.attributesForFeature[layerName].sevAttribute]
     
     @staticmethod     
     def getOutputRows (featureNames):
@@ -185,12 +174,11 @@ class TankResult(object):
         for t in TankResult.tankResults.values():
             tempValueList = [t.tankId]
             for f in featureNamesOrder_Values:
-                tempValueList.append(t.__getattribute__(TankResult.attributesForFeature[f].valAttribute))
-                tempValueList.append(t.__getattribute__(TankResult.attributesForFeature[f].sevAttribute))
+                tempValueList.append(t.getValForLayer(f))
+                tempValueList.append(t.getSevForLayer(f))
             outputRows.append(tempValueList)
         
         return outputRows
-
 
     @staticmethod
     def updateTankValAndScore(row, layerName):
@@ -202,6 +190,7 @@ class TankResult(object):
         #Get the result object for the current tankId.
         if tankId not in TankResult.tankResults:
                 TankResult.tankResults[tankId] = TankResult(tankId)
+                
         tankResultRef = TankResult.tankResults[tankId]
                 
         if layerName == "Aquifer_RechargeDischargeAreas":
@@ -214,25 +203,25 @@ class TankResult(object):
                 score = 5
             else:
                 score = 0     
-            tankResultRef.aquiferVal = val
-            tankResultRef.aquiferSev = score
+            tankResultRef.setValForLayer(layerName, val)
+            tankResultRef.setSevForLayer(layerName, score)
         
         elif layerName == "Wetlands":
             val, score = TankResult.inPolygonValAndScore(row[1])
-            tankResultRef.wetLandsVal = val
-            tankResultRef.wetLandsSev = score
+            tankResultRef.setValForLayer(layerName, val)
+            tankResultRef.setSevForLayer(layerName, score)
         
         elif layerName == "LakesNHDHighRes":
             val = row[1]
             score = TankResult.distanceScore(row[1])
-            tankResultRef.lakesVal = val
-            tankResultRef.lakeSev = score
+            tankResultRef.setValForLayer(layerName, val)
+            tankResultRef.setSevForLayer(layerName, score)
             
         elif layerName == "StreamsNHDHighRes":
             val = row[1]
             score = TankResult.distanceScore(row[1])
-            tankResultRef.streamsVal = val
-            tankResultRef.streamsSev = score
+            tankResultRef.setValForLayer(layerName, val)
+            tankResultRef.setSevForLayer(layerName, score)
                    
         elif layerName == "DWQAssessmentUnits":
             status = str(row[1])
@@ -241,20 +230,20 @@ class TankResult(object):
                 score = 2
             elif status == "Impaired" or status == "Not Assessed":
                 score = 5
-            tankResultRef.assessmentVal = val
-            tankResultRef.assessmentSev = score
+            tankResultRef.setValForLayer(layerName, val)
+            tankResultRef.setSevForLayer(layerName, score)
         
         elif layerName == "Soils":
             texture = row[1]
             val = texture
-            tankResultRef.soilVal = val
-            tankResultRef.soilSev = score
+            tankResultRef.setValForLayer(layerName, val)
+            tankResultRef.setSevForLayer(layerName, score)
         
         elif layerName == "ShallowGroundWater":
             depth = row[1]
             val = depth
-            tankResultRef.shallowWaterVal = val
-            tankResultRef.shallowWaterSev = score
+            tankResultRef.setValForLayer(layerName, val)
+            tankResultRef.setSevForLayer(layerName, score)
         
         elif layerName == "CensusTracts2010":
             popDensity = float(row[1])/float(row[2])
@@ -271,8 +260,8 @@ class TankResult(object):
                 score = 1
             else:
                 score = 0
-            tankResultRef.censusVal = val
-            tankResultRef.censusSev = score
+            tankResultRef.setValForLayer(layerName, val)
+            tankResultRef.setSevForLayer(layerName, score)
                             
         elif layerName == "GroundWaterZones" or layerName == "SurfaceWaterZones":
             nearDist = row[2]
@@ -292,14 +281,14 @@ class TankResult(object):
             else:
                 score = 0
             
-            if tankResultRef.udwspzSev < score:
-                tankResultRef.udwspzVal = val
-                tankResultRef.udwspzSev = score           
+            if tankResultRef.getSevForLayer(layerName) < score:
+                tankResultRef.setValForLayer(layerName, val)
+                tankResultRef.setSevForLayer(layerName, score)           
         elif layerName == "wrpod":
             val = row[1]
             score = TankResult.distanceScore(row[1])
-            tankResultRef.podVal = val
-            tankResultRef.podSev = score
+            tankResultRef.setValForLayer(layerName, val)
+            tankResultRef.setSevForLayer(layerName, score)
             
         return (val, score)
     
@@ -366,6 +355,7 @@ class RiskFeature(object):
         
         
         return nearTable
+
         
 class InPolygonFeature (RiskFeature):
     """Risk feature type where score is determined by a point in polygon
@@ -473,11 +463,11 @@ class TankRisk(object):
 
 if __name__ == '__main__':
     
-    version = "0.5.3"
-    testing = True
+    version = "0.6.0"
+    testing = False
     if testing:
         mapDoc = r"..\data\test_map.mxd"
-        facilityUstTankPoints = r"C:\KW_Working\EnvTankSeverity\LocalFeaturesForTesting.gdb\FACILITYUST"
+        facilityUstTankPoints = r"..\data\FACILITYUST.gdb\FACILITYUST"
         outputDir = r"..\data\outputs"
     else:
         mapDoc = "CURRENT"
@@ -491,6 +481,7 @@ if __name__ == '__main__':
         arcpy.AddError("Invalid license level: ArcGIS for Desktop Advanced required")
         
     Outputs.setOutputDirectory(outputDir)
+    arcpy.Delete_management(Outputs.tempDir)
     startTime = time.time()
     tankRiskAssessor = TankRisk()
     tankRiskAssessor.start(facilityUstTankPoints, mapDoc)
