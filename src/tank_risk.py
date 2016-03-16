@@ -14,11 +14,18 @@ class MapSource(object):
         pass
      
     def getSelectedlayers(self):
-        mxd = arcpy.mapping.MapDocument(mapDoc)
+        mxd = arcpy.mapping.MapDocument(self.mapDoc)
         layerPaths = []
         for layer in arcpy.mapping.ListLayers(mxd):
             if layer.visible:
-                layerPaths.append(layer.dataSource)
+                if layer.supports('DATASOURCE'):
+                    layerPaths.append(layer.dataSource)
+                elif layer.supports('WORKSPACEPATH') and layer.supports('DATASETNAME'):
+                    layerPaths.append(os.path.join(layer.workspacePath, layer.datasetName))
+                elif layer.supports('NAME'):
+                    arcpy.AddWarning('Did not find workspace: {}'.format(layer.name))
+                else:
+                    arcpy.AddWarning('Visble layer not supported')
         del mxd
         return list(layerPaths)
     
@@ -463,7 +470,7 @@ class TankRisk(object):
 
 if __name__ == '__main__':
     
-    version = "0.6.0"
+    version = "0.7.1"
     testing = False
     if testing:
         mapDoc = r"..\data\test_map.mxd"
