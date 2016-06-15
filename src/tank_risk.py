@@ -440,21 +440,42 @@ class TankRisk(object):
         arcpy.CopyRows_management(os.path.join(Outputs.outputDirectory, Outputs.outputCsvName),
                                   os.path.join(Outputs.outputGdb, Outputs.outputTableName))
 
+    def checkFields(self, riskFeatures):
+        for riskFeature in riskFeatures:
+            featureName = self.parseName(riskFeature)
+            if featureName in TankResult.attributesForFeature and TankResult.attributesForFeature[featureName].type == TankResult.ATTRIBUTE:
+                fieldNames = [f.name for f in arcpy.ListFields(riskFeature)]
+                calcFields = TankResult.attributesForFeature[featureName].calcFields
+                missingField = False
+                for cF in calcFields:
+                    if cF not in fieldNames:
+                        arcpy.AddError("Field {} not present in {}".format(cF, featureName))
+                        missingField = True
+                if missingField:
+                    raise ValueError('Required fields not found')
+
+
     def start(self, tankPnts, mapDocument):
         mapDoc = MapSource(mapDocument)
         tankPoints = tankPnts
         riskFeatures = mapDoc.getSelectedlayers()
 
         # Check for missing fields in attribute layers.
-        for riskFeature in riskFeatures:
-            featureName = self.parseName(riskFeature)
-            if featureName in TankResult.attributesForFeature and TankResult.attributesForFeature[featureName].type == TankResult.ATTRIBUTE:
-                fieldNames = [f.name for f in arcpy.ListFields(riskFeature)]
-                calcFields = TankResult.attributesForFeature[featureName].calcFields
-                for cF in calcFields:
-                    if cF not in fieldNames:
-                        arcpy.AddError("Field {} not present in {}".format(cF, featureName))
-                        return
+        try:
+            self.checkFields(riskFeatures)
+        except ValueError:
+            return False
+        # for riskFeature in riskFeatures:
+        #     featureName = self.parseName(riskFeature)
+        #     if featureName in TankResult.attributesForFeature and TankResult.attributesForFeature[featureName].type == TankResult.ATTRIBUTE:
+        #         fieldNames = [f.name for f in arcpy.ListFields(riskFeature)]
+        #         calcFields = TankResult.attributesForFeature[featureName].calcFields
+        #         missingField = False
+        #         for cF in calcFields:
+        #             if cF not in fieldNames:
+        #                 arcpy.AddError("Field {} not present in {}".format(cF, featureName))
+        #                 return
+
 
         for riskFeature in riskFeatures:
             rfStartTime = time.time()
@@ -477,11 +498,12 @@ class TankRisk(object):
 
         resultRows = TankResult.getOutputRows(self.riskFeatureNameOrder)
         self.createOutputTable(resultRows)
+        return True
 
 
 if __name__ == '__main__':
 
-    version = "1.0.1"
+    version = "1.0.0"
     testing = False
     if testing:
         mapDoc = r"..\data\test_map.mxd"
@@ -502,6 +524,10 @@ if __name__ == '__main__':
     arcpy.Delete_management(Outputs.tempDir)
     startTime = time.time()
     tankRiskAssessor = TankRisk()
-    tankRiskAssessor.start(facilityUstTankPoints, mapDoc)
+    completed = tankRiskAssessor.start(facilityUstTankPoints, mapDoc)
+    if completed:
+        arcpy.AddMessage('Risk assesment results created')
+    else:
+        arcpy.AddError('Risk assesment failed')
     arcpy.Delete_management(Outputs.tempDir)
     print time.time() - startTime
