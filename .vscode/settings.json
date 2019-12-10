@@ -11,10 +11,12 @@
   ],
   "cSpell.words": [
     "FACILITYUST",
+    "aprx",
     "arcpy",
     "facilityid",
     "objectid",
     "strftime",
+    "tqdm",
     "udwspz",
     "wrpod"
   ],
