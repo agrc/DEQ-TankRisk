@@ -55,6 +55,6 @@ target/
 
 #Project specific
 data
-.project
-.pydevproject
 
+# rope
+.ropeproject/
