@@ -1,260 +1,277 @@
+#!/usr/bin/env python
+# * coding: utf8 *
 '''
+tank_risk.py
 ArcGIS script tool for evaluating tank risk based on spatial relationships to other data.
-
-Created on May 22, 2015
-@author: kwalker
 '''
-import arcpy, os, time, csv
+import csv
+import os
+import time
+
+import arcpy
 
 
-class MapSource(object):
-    """Class for accessing map document information."""
-    def __init__(self, mapDocument):
-        self.mapDoc = mapDocument
-        pass
+class MapSource():
+    '''Class for accessing map document information.'''
 
-    def getSelectedlayers(self):
-        mxd = arcpy.mapping.MapDocument(self.mapDoc)
-        layerPaths = []
+    def __init__(self, map_document):
+        self.map_document = map_document
+
+    def get_selected_layers(self):
+        mxd = arcpy.mapping.MapDocument(self.map_document)
+        layer_paths = []
+
         for layer in arcpy.mapping.ListLayers(mxd):
             if layer.visible:
                 if layer.supports('DATASOURCE'):
-                    layerPaths.append(layer.dataSource)
+                    layer_paths.append(layer.dataSource)
                 elif layer.supports('WORKSPACEPATH') and layer.supports('DATASETNAME'):
-                    layerPaths.append(os.path.join(layer.workspacePath, layer.datasetName))
+                    layer_paths.append(os.path.join(layer.workspacePath, layer.datasetName))
                 elif layer.supports('NAME'):
                     arcpy.AddWarning('Did not find workspace: {}'.format(layer.name))
                 else:
-                    arcpy.AddWarning('Visble layer not supported')
+                    arcpy.AddWarning('Visible layer not supported')
+
         del mxd
-        return list(layerPaths)
 
+        return list(layer_paths)
 
-    def addLayerToMap(self, layerPath):
-        mxd = arcpy.mapping.MapDocument(self.mapDoc)
-        df = arcpy.mapping.ListDataFrames(mxd,"*")[0]
-        newLayer = arcpy.mapping.Layer(layerPath)
-        arcpy.mapping.AddLayer(df, newLayer,"BOTTOM")
+    def addLayerToMap(self, layer_path):
+        mxd = arcpy.mapping.MapDocument(self.map_document)
+        df = arcpy.mapping.ListDataFrames(mxd, '*')[0]
+
+        newLayer = arcpy.mapping.Layer(layer_path)
+
+        arcpy.mapping.AddLayer(df, newLayer, 'BOTTOM')
+
         del mxd
         del df
         del newLayer
 
 
-class Outputs(object):
-    """Outputs stores all the directory and file name info.
-    - setOutputDirectory initializes all attribute."""
-    uniqueTimeString = None
+class Outputs():
+    '''Outputs stores all the directory and file name info.
+    - setOutputDirectory initializes all attribute.'''
+    unique_time_string = None
 
-    outputDirectory = None
-    outputGdbName = None
-    outputGdb = None
+    output_directory = None
+    output_gdb_name = None
+    output_gdb = None
     outputTableName = None
 
-    outputCsvName = None
+    output_csv_name = None
 
-    tempDir = None
-    tempGdbName =  None
-    tempGdb = None
+    temp_dir = None
+    temp_gdb_name = None
+    temp_gdb = None
 
     @staticmethod
-    def setOutputDirectory(outputDir):
-        Outputs.uniqueTimeString = time.strftime("%Y%m%d%H%M%S")
+    def set_output_directory(output_dir):
+        Outputs.unique_time_string = time.strftime('%Y%m%d%H%M%S')
 
-        Outputs.outputDirectory = outputDir
-        Outputs.outputGdbName = "TankRisk_{}.gdb".format(Outputs.uniqueTimeString)
-        Outputs.outputGdb = os.path.join(Outputs.outputDirectory, Outputs.outputGdbName)
-        Outputs.outputTableName = "TankRiskResults_{}".format(Outputs.uniqueTimeString)
+        Outputs.output_directory = output_dir
+        Outputs.output_gdb_name = 'TankRisk_{}.gdb'.format(Outputs.unique_time_string)
+        Outputs.output_gdb = os.path.join(Outputs.output_directory, Outputs.output_gdb_name)
+        Outputs.outputTableName = 'TankRiskResults_{}'.format(Outputs.unique_time_string)
 
-        Outputs.outputCsvName = "TankRiskResults_{}.csv".format(Outputs.uniqueTimeString)
+        Outputs.output_csv_name = 'TankRiskResults_{}.csv'.format(Outputs.unique_time_string)
 
-        Outputs.tempDir = "in_memory"
-        Outputs.tempGdbName =  "nearsTemp_{}.gdb".format(Outputs.uniqueTimeString)
-        Outputs.tempGdb = "in_memory" #os.path.join(tempDir, tempGdbName)
-
-
-class LayerAttributes(object):
-    """LayerAttributes stores risk feature information in a way that
-    is easy to access."""
-    def __init__(self, type, valAttribute, sevAttribute, valFieldName, sevFieldName, calcFields = None, valMethod = None):
-        self.type = type #type of risk feature
-        self.valAttribute = valAttribute #attribute for value result
-        self.sevAttribute = sevAttribute #attribute for severity result
-        self.valFieldName = valFieldName #Value field name in output table
-        self.sevFieldName = sevFieldName #Severity field name in output table
-        self.calcFields = calcFields #Fields for attribute type risk features
-        self.valMethod = valMethod #Method to produce value. Not yet used.
+        Outputs.temp_dir = 'in_memory'
+        Outputs.temp_gdb_name = 'nearsTemp_{}.gdb'.format(Outputs.unique_time_string)
+        Outputs.temp_gdb = 'in_memory'
 
 
-class TankResult(object):
-    """Stores everything that is specific to each risk feature including:
-    - Litterals (field names)
+class LayerAttributes():
+    '''LayerAttributes stores risk feature information in a way that
+    is easy to access.'''
+
+    def __init__(self, risk_type, value_result_attribute, severity_result_attribute, value_field, severity_field, calc_fields=None, value_method=None):
+        #: type of risk feature
+        self.type = risk_type
+        #: attribute for value result
+        self.value_result_attribute = value_result_attribute
+        #: attribute for severity result
+        self.severity_result_attribute = severity_result_attribute
+        #: Value field name in output table
+        self.value_field = value_field
+        #: Severity field name in output table
+        self.severity_field = severity_field
+        #: Fields for attribute type risk features
+        self.calc_fields = calc_fields
+        #: Method to produce value. Not yet used.
+        self.value_method = value_method
+
+
+class TankResult():
+    '''Stores everything that is specific to each risk feature including:
+    - Literals (field names)
     - Logic for scoring results for each risk feature
-    - Result data for each risk feature"""
-    tankResults = {}
-    IN_POLYGON = "inPolygon"
-    DISTANCE = "distance"
-    ATTRIBUTE = "attribute"
-    OUTPUT_ID_FIELD = "FACILITYID"
-    #attributesForFeature associates feature names with attributes
-    attributesForFeature = {"Aquifer_RechargeDischargeAreas": LayerAttributes(ATTRIBUTE,
-                                                                 "aquiferVal", "aquiferSev",
-                                                                 "aquiferVal", "aquiferSev",
-                                                                 ["ZONE"]),
-                    "Wetlands": LayerAttributes(IN_POLYGON,
-                                               "wetLandsVal", "wetLandsSev",
-                                               "wetLandsVal", "wetLandsSev"),
-                    "LakesNHDHighRes": LayerAttributes(DISTANCE ,
-                                                      "lakesVal", "lakeSev",
-                                                      "lakesVal", "lakeSev"),
-                    "StreamsNHDHighRes": LayerAttributes(DISTANCE ,
-                                                        "streamsVal", "streamsSev",
-                                                        "streamsVal", "streamsSev"),
-                    "DWQAssessmentUnits": LayerAttributes(ATTRIBUTE,
-                                                           "assessmentVal", "assessmentSev",
-                                                           "assessmentVal", "assessmentSev",
-                                                           ["STATUS2006"]),
-                    "Soils": LayerAttributes(ATTRIBUTE,
-                                               "soilVal", "soilSev",
-                                               "soilVal", "soilSev",
-                                               ["TEX_DEF"]),
-                    "ShallowGroundWater": LayerAttributes(ATTRIBUTE,
-                                                         "shallowWaterVal", "shallowWaterSev",
-                                                         "shallowWaterVal", "shallowWaterSev",
-                                                         ["DEPTH"]),
-                    "CensusTracts2010":LayerAttributes(ATTRIBUTE,
-                                                      "censusVal", "censusSev",
-                                                      "censusVal", "censusSev",
-                                                      ["POP100", "AREALAND"]),
-                    "GroundWaterZones":LayerAttributes(ATTRIBUTE,
-                                                      "udwspzVal", "udwspzSev",
-                                                      "udwspzVal", "udwspzSev",
-                                                      ["ProtZone"]),
-                    "SurfaceWaterZones":LayerAttributes(ATTRIBUTE,
-                                                      "udwspzVal", "udwspzSev",
-                                                      "udwspzVal", "udwspzSev",
-                                                      ["ProtZone"]),
-                  "wrpod": LayerAttributes(DISTANCE,                #Also known as PointsOfDiversion
-                                                 "podVal", "podSev",
-                                                 "podVal", "podSev")
-                  }
+    - Result data for each risk feature'''
+    tank_results = {}
+    IN_POLYGON = 'inPolygon'
+    DISTANCE = 'distance'
+    ATTRIBUTE = 'attribute'
+    OUTPUT_ID_FIELD = 'FACILITYID'
 
-    def __init__(self, tankId):
-        #FacilityUST OBJECTID
-        self.tankId = tankId
-        #Risk layer result attributes
-        for f in TankResult.attributesForFeature:
-            self.__dict__[TankResult.attributesForFeature[f].valAttribute] = None
-            self.__dict__[TankResult.attributesForFeature[f].sevAttribute] = None
+    #: attributesForFeature associates feature names with attributes
+    attributes_for_feature = {
+        'Aquifer_RechargeDischargeAreas': LayerAttributes(ATTRIBUTE, 'aquiferVal', 'aquiferSev', 'aquiferVal', 'aquiferSev', ['ZONE']),
+        'Wetlands': LayerAttributes(IN_POLYGON, 'wetLandsVal', 'wetLandsSev', 'wetLandsVal', 'wetLandsSev'),
+        'LakesNHDHighRes': LayerAttributes(DISTANCE, 'lakesVal', 'lakeSev', 'lakesVal', 'lakeSev'),
+        'StreamsNHDHighRes': LayerAttributes(DISTANCE, 'streamsVal', 'streamsSev', 'streamsVal', 'streamsSev'),
+        'DWQAssessmentUnits': LayerAttributes(ATTRIBUTE, 'assessmentVal', 'assessmentSev', 'assessmentVal', 'assessmentSev', ['STATUS2006']),
+        'Soils': LayerAttributes(ATTRIBUTE, 'soilVal', 'soilSev', 'soilVal', 'soilSev', ['TEX_DEF']),
+        'ShallowGroundWater': LayerAttributes(ATTRIBUTE, 'shallowWaterVal', 'shallowWaterSev', 'shallowWaterVal', 'shallowWaterSev', ['DEPTH']),
+        'CensusTracts2010': LayerAttributes(ATTRIBUTE, 'censusVal', 'censusSev', 'censusVal', 'censusSev', ['POP100', 'AREALAND']),
+        'GroundWaterZones': LayerAttributes(ATTRIBUTE, 'udwspzVal', 'udwspzSev', 'udwspzVal', 'udwspzSev', ['ProtZone']),
+        'SurfaceWaterZones': LayerAttributes(ATTRIBUTE, 'udwspzVal', 'udwspzSev', 'udwspzVal', 'udwspzSev', ['ProtZone']),
+        'wrpod': LayerAttributes(
+            DISTANCE,  #Also known as PointsOfDiversion
+            'podVal',
+            'podSev',
+            'podVal',
+            'podSev'
+        )
+    }
 
-    def setValForLayer(self, layerName, val):
-        self.__dict__[TankResult.attributesForFeature[layerName].valAttribute] = val
+    def __init__(self, tank_id):
+        #: FacilityUST OBJECTID
+        self.tank_id = tank_id
+        #: Risk layer result attributes
+        for layer_name in TankResult.attributes_for_feature:
+            self.__dict__[TankResult.attributes_for_feature[layer_name].value_result_attribute] = None
+            self.__dict__[TankResult.attributes_for_feature[layer_name].severity_result_attribute] = None
 
-    def getValForLayer(self, layerName):
-        return self.__dict__[TankResult.attributesForFeature[layerName].valAttribute]
+    def set_value_for_layer(self, layer_name, value):
+        self.__dict__[TankResult.attributes_for_feature[layer_name].value_result_attribute] = value
 
-    def setSevForLayer(self, layerName, sev):
-        self.__dict__[TankResult.attributesForFeature[layerName].sevAttribute] = sev
+    def get_value_for_layer(self, layer_name):
+        return self.__dict__[TankResult.attributes_for_feature[layer_name].value_result_attribute]
 
-    def getSevForLayer(self, layerName):
-        return self.__dict__[TankResult.attributesForFeature[layerName].sevAttribute]
+    def set_severity_for_layer(self, layer_name, severity):
+        self.__dict__[TankResult.attributes_for_feature[layer_name].severity_result_attribute] = severity
+
+    def get_severity_for_layer(self, layer_name):
+        return self.__dict__[TankResult.attributes_for_feature[layer_name].severity_result_attribute]
 
     @staticmethod
-    def getOutputRows (featureNames):
-        """Get a list that contains the rows of the output table, including header.
-        - featureNames are used to order output table fields."""
-        outputRows = []
-        featureNameOrder_Header = list(featureNames)
-        featureNamesOrder_Values = []
-        #Add header
-        headerList = [TankResult.OUTPUT_ID_FIELD]
-        for f in featureNameOrder_Header:
-            valFieldName = TankResult.attributesForFeature[f].valFieldName
-            sevFieldName = TankResult.attributesForFeature[f].sevFieldName
-            if valFieldName in headerList or sevFieldName in headerList:
-                continue#Two layers can share one output field and the field doesn't need to be added to twice.
-            featureNamesOrder_Values.append(f)#Make a list without shared outputs for value adding efficiency
-            headerList.append(valFieldName)
-            headerList.append(sevFieldName)
+    def get_output_rows(feature_names):
+        '''Get a list that contains the rows of the output table, including header.
+        - feature_names are used to order output table fields.'''
+        output_rows = []
+        feature_name_order_header = list(feature_names)
+        feature_name_order_values = []
 
-        outputRows.append(headerList)
-        #Add values
-        for t in TankResult.tankResults.values():
-            tempValueList = [t.tankId]
-            for f in featureNamesOrder_Values:
-                tempValueList.append(t.getValForLayer(f))
-                tempValueList.append(t.getSevForLayer(f))
-            outputRows.append(tempValueList)
+        #: Add header
+        header_list = [TankResult.OUTPUT_ID_FIELD]
 
-        return outputRows
+        for layer_name in feature_name_order_header:
+            valFieldName = TankResult.attributes_for_feature[layer_name].value_field
+            sevFieldName = TankResult.attributes_for_feature[layer_name].severity_field
+
+            if valFieldName in header_list or sevFieldName in header_list:
+                #: Two layers can share one output field and the field doesn't need to be added to twice.
+                continue
+
+            #: Make a list without shared outputs for value adding efficiency
+            feature_name_order_values.append(layer_name)
+            header_list.append(valFieldName)
+            header_list.append(sevFieldName)
+
+        output_rows.append(header_list)
+
+        #: Add values
+        for feature in TankResult.tank_results.values():
+            temp_values = [feature.tankId]
+
+            for layer_name in feature_name_order_values:
+                temp_values.append(feature.get_value_for_layer(layer_name))
+                temp_values.append(feature.set_severity_for_layer(layer_name))
+
+            output_rows.append(temp_values)
+
+        return output_rows
 
     @staticmethod
-    def updateTankValAndScore(row, layerName):
-        """Update TankResult for the tankId contained in row parameter.
-        -The items contained in a row are dependent on the particular RiskFeautre layerName and type."""
-        val = 0
+    def update_tank_value_and_score(row, layer_name):
+        '''Update TankResult for the tankId contained in row parameter.
+        -The items contained in a row are dependent on the particular RiskFeature layerName and type.'''
+        value = 0
         score = 0
-        tankId = row[0]
-        #Get the result object for the current tankId.
-        if tankId not in TankResult.tankResults:
-                TankResult.tankResults[tankId] = TankResult(tankId)
+        tank_id = row[0]
 
-        tankResultRef = TankResult.tankResults[tankId]
+        #: Get the result object for the current tankId.
+        if tank_id not in TankResult.tank_results:
+            TankResult.tank_results[tank_id] = TankResult(tank_id)
 
-        if layerName == "Aquifer_RechargeDischargeAreas":
-            val = str(row[1])
-            if val == "Discharge":
+        tank = TankResult.tank_results[tank_id]
+
+        if layer_name == 'Aquifer_RechargeDischargeAreas':
+            value = str(row[1])
+
+            if value == 'Discharge':
                 score = 1
-            elif val == "Secondary recharge":
+            elif value == 'Secondary recharge':
                 score = 2
-            elif val == "Primary recharge":
+            elif value == 'Primary recharge':
                 score = 5
             else:
-                score = 0 # "Bedrock recharge"
-            tankResultRef.setValForLayer(layerName, val)
-            tankResultRef.setSevForLayer(layerName, score)
+                #: 'Bedrock recharge'
+                score = 0
 
-        elif layerName == "Wetlands":
-            val, score = TankResult.inPolygonValAndScore(row[1])
-            tankResultRef.setValForLayer(layerName, val)
-            tankResultRef.setSevForLayer(layerName, score)
+            tank.set_value_for_layer(layer_name, value)
+            tank.set_severity_for_layer(layer_name, score)
 
-        elif layerName == "LakesNHDHighRes":
-            val = row[1]
-            score = TankResult.distanceScore(row[1])
-            tankResultRef.setValForLayer(layerName, val)
-            tankResultRef.setSevForLayer(layerName, score)
+        elif layer_name == 'Wetlands':
+            value, score = TankResult.in_polygon_value_and_score(row[1])
 
-        elif layerName == "StreamsNHDHighRes":
-            val = row[1]
-            score = TankResult.distanceScore(row[1])
-            tankResultRef.setValForLayer(layerName, val)
-            tankResultRef.setSevForLayer(layerName, score)
+            tank.set_value_for_layer(layer_name, value)
+            tank.set_severity_for_layer(layer_name, score)
 
-        elif layerName == "DWQAssessmentUnits":
+        elif layer_name == 'LakesNHDHighRes':
+            value = row[1]
+            score = TankResult.distance_score(row[1])
+
+            tank.set_value_for_layer(layer_name, value)
+            tank.set_severity_for_layer(layer_name, score)
+
+        elif layer_name == 'StreamsNHDHighRes':
+            value = row[1]
+            score = TankResult.distance_score(row[1])
+
+            tank.set_value_for_layer(layer_name, value)
+            tank.set_severity_for_layer(layer_name, score)
+
+        elif layer_name == 'DWQAssessmentUnits':
             status = str(row[1])
-            val = status
-            if status == "Fully Supporting":
+            value = status
+
+            if status == 'Fully Supporting':
                 score = 2
-            elif status == "Impaired" or status == "Not Assessed":
+            elif status == 'Impaired' or status == 'Not Assessed':
                 score = 5
-            tankResultRef.setValForLayer(layerName, val)
-            tankResultRef.setSevForLayer(layerName, score)
 
-        elif layerName == "Soils":
+            tank.set_value_for_layer(layer_name, value)
+            tank.set_severity_for_layer(layer_name, score)
+
+        elif layer_name == 'Soils':
             texture = row[1]
-            val = texture
-            tankResultRef.setValForLayer(layerName, val)
-            tankResultRef.setSevForLayer(layerName, score)
+            value = texture
 
-        elif layerName == "ShallowGroundWater":
+            tank.set_value_for_layer(layer_name, value)
+            tank.set_severity_for_layer(layer_name, score)
+
+        elif layer_name == 'ShallowGroundWater':
             depth = row[1]
-            val = depth
-            tankResultRef.setValForLayer(layerName, val)
-            tankResultRef.setSevForLayer(layerName, score)
+            value = depth
 
-        elif layerName == "CensusTracts2010":
-            popDensity = float(row[1])/float(row[2])
-            val = popDensity
+            tank.set_value_for_layer(layer_name, value)
+            tank.set_severity_for_layer(layer_name, score)
+
+        elif layer_name == 'CensusTracts2010':
+            popDensity = float(row[1]) / float(row[2])
+            value = popDensity
+
             if popDensity > 0.00181:
                 score = 5
             elif popDensity > 0.00108:
@@ -267,15 +284,17 @@ class TankResult(object):
                 score = 1
             else:
                 score = 0
-            tankResultRef.setValForLayer(layerName, val)
-            tankResultRef.setSevForLayer(layerName, score)
 
-        elif layerName == "GroundWaterZones" or layerName == "SurfaceWaterZones":
+            tank.set_value_for_layer(layer_name, value)
+            tank.set_severity_for_layer(layer_name, score)
+
+        elif layer_name == 'GroundWaterZones' or layer_name == 'SurfaceWaterZones':
             nearDist = row[2]
             protZone = row[1]
-            val = protZone
+            value = protZone
+
             if nearDist != 0:
-                val = 0
+                value = 0
                 sev = 0
             elif protZone == 4:
                 score = 2
@@ -288,21 +307,24 @@ class TankResult(object):
             else:
                 score = 0
 
-            if tankResultRef.getSevForLayer(layerName) < score:
-                tankResultRef.setValForLayer(layerName, val)
-                tankResultRef.setSevForLayer(layerName, score)
-        elif layerName == "wrpod":
-            val = row[1]
-            score = TankResult.distanceScore(row[1])
-            tankResultRef.setValForLayer(layerName, val)
-            tankResultRef.setSevForLayer(layerName, score)
+            if tank.getSevForLayer(layer_name) < score:
+                tank.set_value_for_layer(layer_name, value)
+                tank.set_severity_for_layer(layer_name, score)
 
-        return (val, score)
+        elif layer_name == 'wrpod':
+            value = row[1]
+            score = TankResult.distance_score(row[1])
+
+            tank.set_value_for_layer(layer_name, value)
+            tank.set_severity_for_layer(layer_name, score)
+
+        return (value, score)
 
     @staticmethod
-    def inPolygonValAndScore(distance):
+    def in_polygon_value_and_score(distance):
         val = None
         score = None
+
         if distance == 0:
             val = 1
             score = 5
@@ -313,9 +335,10 @@ class TankResult(object):
         return (val, score)
 
     @staticmethod
-    def distanceScore(distance):
+    def distance_score(distance):
         dist = float(distance)
         score = None
+
         if dist > 332:
             score = 1
         elif dist > 192:
@@ -332,202 +355,219 @@ class TankResult(object):
         return score
 
 
-class RiskFeature(object):
-    """Parent class for all risk feature types."""
-    def __init__(self, layerPath, layerName, outputGdb):
-        self.layerPath = layerPath
-        self.layerName = layerName
-        self.valueAttribute = "{}_{}".format(layerName, "val")
-        self.severityAttribute = "{}_{}".format(layerName, "sev")
-        self.nearTable = "near_" + layerName
-        self.nearTablePath = os.path.join(outputGdb, self.nearTable)
-        self.nearDistField = "NEAR_DIST"
-        self.nearTankIDField = "IN_FID"
-        self.nearRiskIdField = "NEAR_FID"
-        self.tankObjectID = "OBJECTID"
-        self.tankFacilityID = "FACILITYID"
-        self.outputGdb = outputGdb
+class RiskFeature():
+    '''Parent class for all risk feature types.'''
 
-    def createNearTable(self, tankPoints):
-        """Near table used to determine distance between tank points and
+    def __init__(self, layer_path, layer_name, output_gdb):
+        self.layer_path = layer_path
+        self.layer_name = layer_name
+        self.value_attribute = f'{layer_name}_val'
+        self.severity_attribute = f'{layer_name}_sev'
+        self.near_table = 'near_' + layer_name
+        self.near_table_path = os.path.join(output_gdb, self.near_table)
+        self.near_dist_field = 'NEAR_DIST'
+        self.near_tank_id_field = 'IN_FID'
+        self.near_risk_id_field = 'NEAR_FID'
+        self.tank_id = 'OBJECTID'
+        self.tank_facility_id = 'FACILITYID'
+        self.output_gdb = output_gdb
+
+    def create_near_table(self, tank_points):
+        '''Near table used to determine distance between tank points and
         everything in this risk feature.
-        - Point in polygon relationship determined by distance of 0"""
-        inFeature = tankPoints
-        nearTable = os.path.join(self.outputGdb, self.nearTable)
-        nearFeature = self.layerPath
-        nearTime = time.time()
-        arcpy.GenerateNearTable_analysis (inFeature, nearFeature, nearTable)
-        print "Near_{}: {}".format(self.layerPath.split(".")[-1], time.time() - nearTime)
-        arcpy.JoinField_management(nearTable, self.nearTankIDField, tankPoints, self.tankObjectID, [self.tankFacilityID])
+        - Point in polygon relationship determined by distance of 0'''
+        in_feature = tank_points
+        near_table = os.path.join(self.output_gdb, self.near_table)
+        nearFeature = self.layer_path
+        near_time = time.time()
+
+        arcpy.GenerateNearTable_analysis(in_feature, nearFeature, near_table)
+
+        print(f'Near_{self.layer_path.split(".")[-1]}: {time.time() - near_time}')
+
+        arcpy.JoinField_management(near_table, self.near_tank_id_field, tank_points, self.tank_id, [self.tank_facility_id])
+
+        return near_table
 
 
-        return nearTable
+class InPolygonFeature(RiskFeature):
+    '''Risk feature type where score is determined by a point in polygon
+    relationship.'''
 
-
-class InPolygonFeature (RiskFeature):
-    """Risk feature type where score is determined by a point in polygon
-    relationship."""
-    def updateTankResults(self):
-        with arcpy.da.SearchCursor(in_table = self.nearTablePath,
-                           field_names = [self.tankFacilityID, self.nearDistField]) as cursor:
+    def update_tank_results(self):
+        with arcpy.da.SearchCursor(in_table=self.near_table_path, field_names=[self.tank_facility_id, self.near_dist_field]) as cursor:
             for row in cursor:
-                tankId = row[0]
-                TankResult.updateTankValAndScore(row, self.layerName)
+                tank_id = row[0]
+                TankResult.update_tank_value_and_score(row, self.layer_name)
 
 
-class DistanceFeature (RiskFeature):
-    """Risk feature type where score is determined by a point distance to
-    another feature."""
-    def updateTankResults(self):
-        with arcpy.da.SearchCursor(in_table = self.nearTablePath,
-                           field_names = [self.tankFacilityID, self.nearDistField]) as cursor:
+class DistanceFeature(RiskFeature):
+    '''Risk feature type where score is determined by a point distance to
+    another feature.'''
+
+    def update_tank_results(self):
+        with arcpy.da.SearchCursor(in_table=self.near_table_path, field_names=[self.tank_facility_id, self.near_dist_field]) as cursor:
             for row in cursor:
-                tankId = row[0]
-                TankResult.updateTankValAndScore(row, self.layerName)
+                tank_id = row[0]
+                TankResult.update_tank_value_and_score(row, self.layer_name)
 
 
-class AttributeFeature (RiskFeature):
-    """Risk feature type where score is determined by a combination of
-    point in polygon, distance, and risk feature table attributes."""
-    def __init__(self, featurePath, featureName, outputGdb, attributeFields):
-        super(AttributeFeature, self).__init__(featurePath, featureName, outputGdb)
-        self.attributeFields = attributeFields
+class AttributeFeature(RiskFeature):
+    '''Risk feature type where score is determined by a combination of
+    point in polygon, distance, and risk feature table attributes.'''
 
-    def updateTankResults(self):
-        arcpy.JoinField_management(self.nearTablePath, self.nearRiskIdField,
-                                   self.layerPath, arcpy.Describe(self.layerPath).OIDFieldName, self.attributeFields)
+    def __init__(self, feature_path, feature_name, output_gdb, attribute_fields):
+        super(AttributeFeature, self).__init__(feature_path, feature_name, output_gdb)
 
-        fields = [self.tankFacilityID]
-        fields.extend(self.attributeFields)#attribute fields are specific to each risk feature.
-        fields.append(self.nearDistField)
-        with arcpy.da.SearchCursor(in_table = self.nearTablePath,
-                           field_names = fields) as cursor:
+        self.attribute_fields = attribute_fields
+
+    def update_tank_results(self):
+        arcpy.JoinField_management(self.near_table_path, self.near_risk_id_field, self.layer_path, arcpy.Describe(self.layer_path).OIDFieldName, self.attribute_fields)
+
+        fields = [self.tank_facility_id]
+
+        #: attribute fields are specific to each risk feature.
+        fields.extend(self.attribute_fields)
+        fields.append(self.near_dist_field)
+
+        with arcpy.da.SearchCursor(in_table=self.near_table_path, field_names=fields) as cursor:
             for row in cursor:
-                TankResult.updateTankValAndScore(row, self.layerName)
+                TankResult.update_tank_value_and_score(row, self.layer_name)
 
 
-class TankRisk(object):
-    """Primary tool class."""
+class TankRisk():
+    '''Primary tool class.'''
+
     def __init__(self):
-        self.riskFeatureNameOrder = []
+        self.risk_feature_name_order = []
 
-    def parseName(self, riskFeature):
-        filePathEnding = riskFeature.split("\\")[-1]
-        fileName = filePathEnding.split(".")
-        if fileName[-1].lower() == 'shp':
-            return fileName[-2]
+    def parse_name(self, risk_feature):
+        file_path_ending = risk_feature.split('\\')[-1]
+        file_name = file_path_ending.split('.')
+
+        if file_name[-1].lower() == 'shp':
+            return file_name[-2]
         else:
-            return fileName[-1]
+            return file_name[-1]
 
-    def riskFeatureFactory(self, riskFeature):
-        featureName = self.parseName(riskFeature)
-        if TankResult.attributesForFeature[featureName].type == TankResult.IN_POLYGON:
-            return InPolygonFeature(riskFeature, featureName, Outputs.tempGdb)
-        elif TankResult.attributesForFeature[featureName].type == TankResult.DISTANCE:
-            return DistanceFeature(riskFeature, featureName, Outputs.tempGdb)
-        elif TankResult.attributesForFeature[featureName].type == TankResult.ATTRIBUTE:
-            return AttributeFeature(riskFeature, featureName, Outputs.tempGdb,
-                                    TankResult.attributesForFeature[featureName].calcFields)
-        else:# Feature not in TankResult.attributesForFeature.
+    def risk_feature_factory(self, risk_feature):
+        featureName = self.parse_name(risk_feature)
+
+        if TankResult.attributes_for_feature[featureName].type == TankResult.IN_POLYGON:
+            return InPolygonFeature(risk_feature, featureName, Outputs.temp_gdb)
+        elif TankResult.attributes_for_feature[featureName].type == TankResult.DISTANCE:
+            return DistanceFeature(risk_feature, featureName, Outputs.temp_gdb)
+        elif TankResult.attributes_for_feature[featureName].type == TankResult.ATTRIBUTE:
+            return AttributeFeature(risk_feature, featureName, Outputs.temp_gdb, TankResult.attributes_for_feature[featureName].calc_fields)
+        else:  #: Feature not in TankResult.attributesForFeature.
             return None
 
-    def createOutputTable(self, resultRows):
-        arcpy.CreateFileGDB_management(Outputs.outputDirectory, Outputs.outputGdbName)
-        with open(os.path.join(Outputs.outputDirectory, Outputs.outputCsvName), "wb") as outCsv:
-            csvWriter = csv.writer(outCsv)
-            csvWriter.writerows(resultRows)
+    def create_output_table(self, result_rows):
+        arcpy.CreateFileGDB_management(Outputs.output_directory, Outputs.output_gdb_name)
 
-        arcpy.CopyRows_management(os.path.join(Outputs.outputDirectory, Outputs.outputCsvName),
-                                  os.path.join(Outputs.outputGdb, Outputs.outputTableName))
+        with open(os.path.join(Outputs.output_directory, Outputs.output_csv_name), 'wb') as out_csv:
+            csv_writer = csv.writer(out_csv)
+            csv_writer.writerows(result_rows)
 
-    def checkFields(self, riskFeatures):
-        for riskFeature in riskFeatures:
-            featureName = self.parseName(riskFeature)
-            if featureName in TankResult.attributesForFeature and TankResult.attributesForFeature[featureName].type == TankResult.ATTRIBUTE:
-                fieldNames = [f.name for f in arcpy.ListFields(riskFeature)]
-                calcFields = TankResult.attributesForFeature[featureName].calcFields
-                missingField = False
-                for cF in calcFields:
-                    if cF not in fieldNames:
-                        arcpy.AddError("Field {} not present in {}".format(cF, featureName))
-                        missingField = True
-                if missingField:
+        arcpy.CopyRows_management(os.path.join(Outputs.output_directory, Outputs.output_csv_name), os.path.join(Outputs.output_gdb, Outputs.outputTableName))
+
+    def check_fields(self, risk_features):
+        for risk_feature in risk_features:
+            feature_name = self.parse_name(risk_feature)
+
+            if feature_name in TankResult.attributes_for_feature and TankResult.attributes_for_feature[feature_name].type == TankResult.ATTRIBUTE:
+                field_names = [field.name for field in arcpy.ListFields(risk_feature)]
+                calc_fields = TankResult.attributes_for_feature[feature_name].calc_fields
+                missing_field = False
+
+                for field in calc_fields:
+                    if field not in field_names:
+                        arcpy.AddError(f'Field {field} not present in {feature_name}')
+                        missing_field = True
+
+                if missing_field:
                     raise ValueError('Required fields not found')
 
+    def start(self, tank_points, map_document):
+        map_doc = MapSource(map_document)
+        risk_features = map_doc.get_selected_layers()
 
-    def start(self, tankPnts, mapDocument):
-        mapDoc = MapSource(mapDocument)
-        tankPoints = tankPnts
-        riskFeatures = mapDoc.getSelectedlayers()
-
-        # Check for missing fields in attribute layers.
+        #: Check for missing fields in attribute layers.
         try:
-            self.checkFields(riskFeatures)
+            self.check_fields(risk_features)
         except ValueError:
             return False
-        # for riskFeature in riskFeatures:
-        #     featureName = self.parseName(riskFeature)
-        #     if featureName in TankResult.attributesForFeature and TankResult.attributesForFeature[featureName].type == TankResult.ATTRIBUTE:
-        #         fieldNames = [f.name for f in arcpy.ListFields(riskFeature)]
-        #         calcFields = TankResult.attributesForFeature[featureName].calcFields
-        #         missingField = False
-        #         for cF in calcFields:
-        #             if cF not in fieldNames:
-        #                 arcpy.AddError("Field {} not present in {}".format(cF, featureName))
-        #                 return
 
+        for feature in risk_features:
+            start_time = time.time()
+            feature_name = self.parse_name(feature)
 
-        for riskFeature in riskFeatures:
-            rfStartTime = time.time()
-            featureName = self.parseName(riskFeature)
-            if featureName == self.parseName(tankPnts):#Tank points are not a risk feature.
-                continue
-            if featureName not in TankResult.attributesForFeature:#The riskFeatureFactory should not receive unkown layers.
-                arcpy.AddWarning("Unkown risk layer: {}".format(self.parseName(featureName)))
+            if feature_name == self.parse_name(tank_points):
+                #: Tank points are not a risk feature.
+
                 continue
 
-            arcpy.AddMessage("Processing: {}".format(featureName))
-            rf = self.riskFeatureFactory(riskFeature)
-            self.riskFeatureNameOrder.append(rf.layerName)#Keep track of name order for output field ordering.
+            if feature_name not in TankResult.attributes_for_feature:
+                #: The riskFeatureFactory should not receive unknown layers.
+                arcpy.AddWarning(f'Unknown risk layer: {self.parse_name(feature_name)}')
 
-            rf.createNearTable(tankPnts)
-            resultTime = time.time()
-            rf.updateTankResults()
-            arcpy.AddMessage("  -Completed: {} Time: {:.2f} sec".format(featureName, time.time() - rfStartTime))
-            print "results: {}".format(time.time() - resultTime)
+                continue
 
-        resultRows = TankResult.getOutputRows(self.riskFeatureNameOrder)
-        self.createOutputTable(resultRows)
+            arcpy.AddMessage(f'Processing: {feature_name}')
+
+            risk_feature = self.risk_feature_factory(feature)
+            #: Keep track of name order for output field ordering.
+            self.risk_feature_name_order.append(risk_feature.layer_name)
+
+            risk_feature.create_near_table(tank_points)
+            stop_time = time.time()
+
+            risk_feature.update_tank_results()
+
+            arcpy.AddMessage('  -Completed: {} Time: {:.2f} sec'.format(feature_name, time.time() - start_time))
+
+            print(f'results: {time.time() - stop_time}')
+
+        resultRows = TankResult.get_output_rows(self.risk_feature_name_order)
+        self.create_output_table(resultRows)
+
         return True
 
 
 if __name__ == '__main__':
 
-    version = "1.0.0"
+    version = '1.0.0'
     testing = False
+
     if testing:
-        mapDoc = r"..\data\test_map.mxd"
-        facilityUstTankPoints = r"..\data\FACILITYUST.gdb\FACILITYUST"
-        outputDir = r"..\data\outputs"
+        map_document = r'..\data\test_map.mxd'
+        facility_ust_points = r'..\data\FACILITYUST.gdb\FACILITYUST'
+        output_directory = r'..\data\outputs'
     else:
-        mapDoc = "CURRENT"
-        facilityUstTankPoints = arcpy.GetParameterAsText(0)
-        outputDir = arcpy.GetParameterAsText(1)
+        map_document = 'CURRENT'
+        facility_ust_points = arcpy.GetParameterAsText(0)
+        output_directory = arcpy.GetParameterAsText(1)
 
-    arcpy.AddMessage("Version {}".format(version))
+    arcpy.AddMessage(f'Version {version}')
     licLevel = arcpy.ProductInfo()
-    if licLevel != "ArcInfo":
-        print "Invalid license level: ArcGIS for Desktop Advanced required"
-        arcpy.AddError("Invalid license level: ArcGIS for Desktop Advanced required")
 
-    Outputs.setOutputDirectory(outputDir)
-    arcpy.Delete_management(Outputs.tempDir)
-    startTime = time.time()
-    tankRiskAssessor = TankRisk()
-    completed = tankRiskAssessor.start(facilityUstTankPoints, mapDoc)
+    if licLevel != 'ArcInfo':
+        print('Invalid license level: ArcGIS for Desktop Advanced required')
+        arcpy.AddError('Invalid license level: ArcGIS for Desktop Advanced required')
+
+    Outputs.set_output_directory(output_directory)
+    arcpy.Delete_management(Outputs.temp_dir)
+
+    start_time = time.time()
+
+    tank_risk_assessor = TankRisk()
+    completed = tank_risk_assessor.start(facility_ust_points, map_document)
+
     if completed:
-        arcpy.AddMessage('Risk assesment results created')
+        arcpy.AddMessage('Risk assessment results created')
     else:
-        arcpy.AddError('Risk assesment failed')
-    arcpy.Delete_management(Outputs.tempDir)
-    print time.time() - startTime
+        arcpy.AddError('Risk assessment failed')
+
+    arcpy.Delete_management(Outputs.temp_dir)
+
+    print(time.time() - start_time)
