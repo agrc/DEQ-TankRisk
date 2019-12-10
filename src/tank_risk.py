@@ -6,6 +6,7 @@ ArcGIS script tool for evaluating tank risk based on spatial relationships to ot
 '''
 import csv
 import os
+import pathlib
 import time
 
 import arcpy
@@ -14,30 +15,32 @@ import arcpy
 class MapSource():
     '''Class for accessing map document information.'''
 
-    def __init__(self, map_document):
-        self.map_document = map_document
+    def __init__(self, pro_project, map_name):
+        project = arcpy.mp.ArcGISProject(pro_project)
+        self.risk_map = project.listMaps(map_name)[0]
 
     def get_selected_layers(self):
-        mxd = arcpy.mapping.MapDocument(self.map_document)
         layer_paths = []
 
-        for layer in arcpy.mapping.ListLayers(mxd):
-            if layer.visible:
-                if layer.supports('DATASOURCE'):
-                    layer_paths.append(layer.dataSource)
-                elif layer.supports('WORKSPACEPATH') and layer.supports('DATASETNAME'):
-                    layer_paths.append(os.path.join(layer.workspacePath, layer.datasetName))
-                elif layer.supports('NAME'):
-                    arcpy.AddWarning('Did not find workspace: {}'.format(layer.name))
-                else:
-                    arcpy.AddWarning('Visible layer not supported')
+        for layer in self.risk_map.listLayers():
+            if not layer.visible:
+                messages.AddWarningMessage(f'skipping {layer.name} since it is not visible')
 
-        del mxd
+                continue
 
-        return list(layer_paths)
+            if layer.supports('DATASOURCE'):
+                layer_paths.append(layer)
+            elif layer.supports('WORKSPACEPATH') and layer.supports('DATASETNAME'):
+                layer_paths.append(layer)
+            elif layer.supports('NAME'):
+                messages.AddWarningMessage(f'Could not find workspace: {layer.name}')
+            else:
+                messages.AddWarningMessage(f'{layer.name} not supported')
 
-    def addLayerToMap(self, layer_path):
-        mxd = arcpy.mapping.MapDocument(self.map_document)
+        return layer_paths
+
+    def add_layer_to_map(self, layer_path):
+        mxd = arcpy.mapping.MapDocument(self.pro_project)
         df = arcpy.mapping.ListDataFrames(mxd, '*')[0]
 
         newLayer = arcpy.mapping.Layer(layer_path)
@@ -57,7 +60,7 @@ class Outputs():
     output_directory = None
     output_gdb_name = None
     output_gdb = None
-    outputTableName = None
+    output_table_name = None
 
     output_csv_name = None
 
@@ -70,9 +73,14 @@ class Outputs():
         Outputs.unique_time_string = time.strftime('%Y%m%d%H%M%S')
 
         Outputs.output_directory = output_dir
+        if not os.path.exists(output_dir):
+            print(f'{output_dir} does not exits. creating now')
+
+            os.makedirs(output_dir)
+
         Outputs.output_gdb_name = 'TankRisk_{}.gdb'.format(Outputs.unique_time_string)
         Outputs.output_gdb = os.path.join(Outputs.output_directory, Outputs.output_gdb_name)
-        Outputs.outputTableName = 'TankRiskResults_{}'.format(Outputs.unique_time_string)
+        Outputs.output_table_name = 'TankRiskResults_{}'.format(Outputs.unique_time_string)
 
         Outputs.output_csv_name = 'TankRiskResults_{}.csv'.format(Outputs.unique_time_string)
 
@@ -182,11 +190,11 @@ class TankResult():
 
         #: Add values
         for feature in TankResult.tank_results.values():
-            temp_values = [feature.tankId]
+            temp_values = [feature.tank_id]
 
             for layer_name in feature_name_order_values:
                 temp_values.append(feature.get_value_for_layer(layer_name))
-                temp_values.append(feature.set_severity_for_layer(layer_name))
+                temp_values.append(feature.get_severity_for_layer(layer_name))
 
             output_rows.append(temp_values)
 
@@ -383,7 +391,7 @@ class RiskFeature():
 
         arcpy.GenerateNearTable_analysis(in_feature, nearFeature, near_table)
 
-        print(f'Near_{self.layer_path.split(".")[-1]}: {time.time() - near_time}')
+        print(f'{near_table}: {time.time() - near_time}')
 
         arcpy.JoinField_management(near_table, self.near_tank_id_field, tank_points, self.tank_id, [self.tank_facility_id])
 
@@ -422,7 +430,10 @@ class AttributeFeature(RiskFeature):
         self.attribute_fields = attribute_fields
 
     def update_tank_results(self):
-        arcpy.JoinField_management(self.near_table_path, self.near_risk_id_field, self.layer_path, arcpy.Describe(self.layer_path).OIDFieldName, self.attribute_fields)
+        arcpy.JoinField_management(
+            self.near_table_path, self.near_risk_id_field, self.layer_path,
+            arcpy.Describe(self.layer_path).OIDFieldName, self.attribute_fields
+        )
 
         fields = [self.tank_facility_id]
 
@@ -440,10 +451,69 @@ class TankRisk():
 
     def __init__(self):
         self.risk_feature_name_order = []
+        self.label = 'Tank Risk Assessor'
+        self.description = 'Evaluate tank risk based on spatial relationships to other data'
+        self.canRunInBackground = False
+
+    def getParameterInfo(self):
+        facility_ust_points = arcpy.Parameter(
+            displayName='Facility UST Points',
+            name='facility_ust_points',
+            datatype='GPFeatureLayer',
+            parameterType='Required',
+            direction='Input',
+        )
+
+        facility_ust_points = arcpy.Parameter(
+            displayName='Map Name',
+            name='map)name',
+            datatype='GPString',
+            parameterType='Required',
+            direction='Input',
+        )
+
+        output_directory = arcpy.Parameter(
+            displayName='Output Features',
+            name='output_directory',
+            datatype='DEWorkspace',
+            parameterType='Derived',
+            direction='Output',
+        )
+
+        return [facility_ust_points, map_name, output_directory]
+
+    def execute(self, parameters, messages):
+        facility_ust_points = parameters[0]
+        map_name = parameters[1]
+        output_directory = parameters[2]
+
+        message.AddMessage(f'Version {version}')
+        license_level = arcpy.ProductInfo()
+
+        if license_level != 'ArcInfo':
+            message.AddErrorMessage('Invalid license level: ArcGIS for Desktop Advanced required')
+
+        Outputs.set_output_directory(output_directory)
+        arcpy.Delete_management(Outputs.temp_dir)
+
+        start_time = time.time()
+
+        tank_risk_assessor = TankRisk()
+        completed = tank_risk_assessor.start(facility_ust_points, 'CURRENT', map_name, messages)
+
+        if completed:
+            message.AddMessage('Risk assessment results created')
+        else:
+            message.AddErrorMessage('Risk assessment failed')
+
+        arcpy.Delete_management(Outputs.temp_dir)
+
+        print(time.time() - start_time)
+
+        self.start(facility_ust_points, 'CURRENT', messages)
 
     def parse_name(self, risk_feature):
-        file_path_ending = risk_feature.split('\\')[-1]
-        file_name = file_path_ending.split('.')
+        file_name = risk_feature.split('.')
 
         if file_name[-1].lower() == 'shp':
             return file_name[-2]
@@ -451,7 +521,7 @@ class TankRisk():
             return file_name[-1]
 
     def risk_feature_factory(self, risk_feature):
-        featureName = self.parse_name(risk_feature)
+        featureName = self.parse_name(risk_feature.name)
 
         if TankResult.attributes_for_feature[featureName].type == TankResult.IN_POLYGON:
             return InPolygonFeature(risk_feature, featureName, Outputs.temp_gdb)
@@ -459,21 +529,23 @@ class TankRisk():
             return DistanceFeature(risk_feature, featureName, Outputs.temp_gdb)
         elif TankResult.attributes_for_feature[featureName].type == TankResult.ATTRIBUTE:
             return AttributeFeature(risk_feature, featureName, Outputs.temp_gdb, TankResult.attributes_for_feature[featureName].calc_fields)
-        else:  #: Feature not in TankResult.attributesForFeature.
+        else:
+            #: Feature not in TankResult.attributesForFeature.
+
             return None
 
     def create_output_table(self, result_rows):
         arcpy.CreateFileGDB_management(Outputs.output_directory, Outputs.output_gdb_name)
 
-        with open(os.path.join(Outputs.output_directory, Outputs.output_csv_name), 'wb') as out_csv:
-            csv_writer = csv.writer(out_csv)
+        with open(os.path.join(Outputs.output_directory, Outputs.output_csv_name), 'w', newline='') as out_csv:
+            csv_writer = csv.writer(out_csv, quoting=csv.QUOTE_MINIMAL)
             csv_writer.writerows(result_rows)
 
-        arcpy.CopyRows_management(os.path.join(Outputs.output_directory, Outputs.output_csv_name), os.path.join(Outputs.output_gdb, Outputs.outputTableName))
+        arcpy.CopyRows_management(os.path.join(Outputs.output_directory, Outputs.output_csv_name), os.path.join(Outputs.output_gdb, Outputs.output_table_name))
 
     def check_fields(self, risk_features):
         for risk_feature in risk_features:
-            feature_name = self.parse_name(risk_feature)
+            feature_name = self.parse_name(risk_feature.name)
 
             if feature_name in TankResult.attributes_for_feature and TankResult.attributes_for_feature[feature_name].type == TankResult.ATTRIBUTE:
                 field_names = [field.name for field in arcpy.ListFields(risk_feature)]
@@ -482,25 +554,30 @@ class TankRisk():
 
                 for field in calc_fields:
                     if field not in field_names:
-                        arcpy.AddError(f'Field {field} not present in {feature_name}')
+                        messages.AddError(f'Field {field} not present in {feature_name}')
                         missing_field = True
 
                 if missing_field:
                     raise ValueError('Required fields not found')
 
-    def start(self, tank_points, map_document):
-        map_doc = MapSource(map_document)
+    def start(self, tank_points, pro_project, map_name, messages):
+        messages.AddMessage('accessing pro map')
+        map_doc = MapSource(pro_project, map_name)
+
+        messages.AddMessage('finding visible layers')
         risk_features = map_doc.get_selected_layers()
 
         #: Check for missing fields in attribute layers.
         try:
+
+            messages.AddMessage('checking fields')
             self.check_fields(risk_features)
         except ValueError:
             return False
 
         for feature in risk_features:
             start_time = time.time()
-            feature_name = self.parse_name(feature)
+            feature_name = self.parse_name(feature.name)
 
             if feature_name == self.parse_name(tank_points):
                 #: Tank points are not a risk feature.
@@ -509,11 +586,11 @@ class TankRisk():
 
             if feature_name not in TankResult.attributes_for_feature:
                 #: The riskFeatureFactory should not receive unknown layers.
-                arcpy.AddWarning(f'Unknown risk layer: {self.parse_name(feature_name)}')
+                messages.AddWarningMessage(f'Unknown risk layer: {feature_name}')
 
                 continue
 
-            arcpy.AddMessage(f'Processing: {feature_name}')
+            messages.AddMessage(f'Processing: {feature_name}')
 
             risk_feature = self.risk_feature_factory(feature)
             #: Keep track of name order for output field ordering.
@@ -524,7 +601,7 @@ class TankRisk():
 
             risk_feature.update_tank_results()
 
-            arcpy.AddMessage('  -Completed: {} Time: {:.2f} sec'.format(feature_name, time.time() - start_time))
+            messages.AddMessage('  -Completed: {} Time: {:.2f} sec'.format(feature_name, time.time() - start_time))
 
             print(f'results: {time.time() - stop_time}')
 
@@ -534,39 +611,55 @@ class TankRisk():
         return True
 
 
+class Logger():
+    def AddMessage(self, string):
+        print(string)
+    def AddWarningMessage(self, string):
+        print(string)
+    def AddErrorMessage(self, string):
+        print(string)
+
+class Toolbox():
+
+    def __init__(self):
+        self.label = 'Tank Risk'
+        self.alias = ''
+
+        # List of tool classes associated with this toolbox
+        self.tools = [TankRisk]
+
+
 if __name__ == '__main__':
+    version = '2.0.0'
 
-    version = '1.0.0'
-    testing = False
+    project_root = pathlib.Path(__file__).resolve().parent.parent
+    pro_project_dir = project_root.joinpath('proproject')
+    pro_project = pro_project_dir.joinpath('TankRisk', 'TankRisk.aprx')
 
-    if testing:
-        map_document = r'..\data\test_map.mxd'
-        facility_ust_points = r'..\data\FACILITYUST.gdb\FACILITYUST'
-        output_directory = r'..\data\outputs'
-    else:
-        map_document = 'CURRENT'
-        facility_ust_points = arcpy.GetParameterAsText(0)
-        output_directory = arcpy.GetParameterAsText(1)
+    map_document = str(pro_project)
+    facility_ust_points = str(pro_project_dir.joinpath('sgid.agrc.utah.gov.sde', 'SGID10.ENVIRONMENT.FACILITYUST'))
+    output_directory = str(pro_project_dir.joinpath('outputs'))
+    map_name = 'Layers'
 
-    arcpy.AddMessage(f'Version {version}')
-    licLevel = arcpy.ProductInfo()
+    print(f'Version {version}')
+    license_level = arcpy.ProductInfo()
 
-    if licLevel != 'ArcInfo':
+    if license_level != 'ArcInfo':
         print('Invalid license level: ArcGIS for Desktop Advanced required')
-        arcpy.AddError('Invalid license level: ArcGIS for Desktop Advanced required')
 
     Outputs.set_output_directory(output_directory)
     arcpy.Delete_management(Outputs.temp_dir)
 
     start_time = time.time()
 
+    messages = Logger()
     tank_risk_assessor = TankRisk()
-    completed = tank_risk_assessor.start(facility_ust_points, map_document)
+    completed = tank_risk_assessor.start(facility_ust_points, map_document, map_name, messages)
 
     if completed:
-        arcpy.AddMessage('Risk assessment results created')
+        print('Risk assessment results created')
     else:
-        arcpy.AddError('Risk assessment failed')
+        print('Risk assessment failed')
 
     arcpy.Delete_management(Outputs.temp_dir)
 
