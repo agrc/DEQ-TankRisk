@@ -54,7 +54,9 @@ docs/_build/
 target/
 
 #Project specific
-data
+proproject/outputs/
+proproject/data/
+proproject/TankRisk/Index/
 
 # rope
 .ropeproject/
