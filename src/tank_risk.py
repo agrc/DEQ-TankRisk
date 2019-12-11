@@ -6,10 +6,31 @@ ArcGIS script tool for evaluating tank risk based on spatial relationships to ot
 '''
 import csv
 import os
-import pathlib
 import time
 
 import arcpy
+
+
+VERSION = '2.0.0'
+
+
+def format_time(seconds):
+    '''seconds: number
+    returns a human-friendly string describing the amount of time
+    '''
+    minute = 60.00
+    hour = 60.00 * minute
+
+    if seconds < 30:
+        return f'{int(seconds * 1000)} ms\'s'
+
+    if seconds < 90:
+        return f'{round(seconds, 2)} seconds'
+
+    if seconds < 90 * minute:
+        return f'{round(seconds / minute, 2)} minutes'
+
+    return f'{round(seconds / hour, 2)} hours'
 
 
 class MapSource():
@@ -19,7 +40,7 @@ class MapSource():
         project = arcpy.mp.ArcGISProject(pro_project)
         self.risk_map = project.listMaps(map_name)[0]
 
-    def get_selected_layers(self):
+    def get_selected_layers(self, messages):
         layer_paths = []
 
         for layer in self.risk_map.listLayers():
@@ -38,18 +59,6 @@ class MapSource():
                 messages.AddWarningMessage(f'{layer.name} not supported')
 
         return layer_paths
-
-    def add_layer_to_map(self, layer_path):
-        mxd = arcpy.mapping.MapDocument(self.pro_project)
-        df = arcpy.mapping.ListDataFrames(mxd, '*')[0]
-
-        newLayer = arcpy.mapping.Layer(layer_path)
-
-        arcpy.mapping.AddLayer(df, newLayer, 'BOTTOM')
-
-        del mxd
-        del df
-        del newLayer
 
 
 class Outputs():
@@ -174,17 +183,17 @@ class TankResult():
         header_list = [TankResult.OUTPUT_ID_FIELD]
 
         for layer_name in feature_name_order_header:
-            valFieldName = TankResult.attributes_for_feature[layer_name].value_field
-            sevFieldName = TankResult.attributes_for_feature[layer_name].severity_field
+            value_field = TankResult.attributes_for_feature[layer_name].value_field
+            severity_field = TankResult.attributes_for_feature[layer_name].severity_field
 
-            if valFieldName in header_list or sevFieldName in header_list:
+            if value_field in header_list or severity_field in header_list:
                 #: Two layers can share one output field and the field doesn't need to be added to twice.
                 continue
 
             #: Make a list without shared outputs for value adding efficiency
             feature_name_order_values.append(layer_name)
-            header_list.append(valFieldName)
-            header_list.append(sevFieldName)
+            header_list.append(value_field)
+            header_list.append(severity_field)
 
         output_rows.append(header_list)
 
@@ -277,18 +286,17 @@ class TankResult():
             tank.set_severity_for_layer(layer_name, score)
 
         elif layer_name == 'CensusTracts2010':
-            popDensity = float(row[1]) / float(row[2])
-            value = popDensity
+            value = float(row[1]) / float(row[2])
 
-            if popDensity > 0.00181:
+            if value > 0.00181:
                 score = 5
-            elif popDensity > 0.00108:
+            elif value > 0.00108:
                 score = 4
-            elif popDensity > .0000274:
+            elif value > .0000274:
                 score = 3
-            elif popDensity > 0.00000723:
+            elif value > 0.00000723:
                 score = 2
-            elif popDensity > 0.0:
+            elif value > 0.0:
                 score = 1
             else:
                 score = 0
@@ -297,20 +305,20 @@ class TankResult():
             tank.set_severity_for_layer(layer_name, score)
 
         elif layer_name == 'GroundWaterZones' or layer_name == 'SurfaceWaterZones':
-            nearDist = row[2]
-            protZone = row[1]
-            value = protZone
+            near_distance = row[2]
+            protection_zone = row[1]
+            value = protection_zone
 
-            if nearDist != 0:
+            if near_distance != 0:
                 value = 0
-                sev = 0
-            elif protZone == 4:
+                score = 0
+            elif protection_zone == 4:
                 score = 2
-            elif protZone == 3:
+            elif protection_zone == 3:
                 score = 3
-            elif protZone == 2:
+            elif protection_zone == 2:
                 score = 4
-            elif protZone == 1:
+            elif protection_zone == 1:
                 score = 5
             else:
                 score = 0
@@ -386,13 +394,9 @@ class RiskFeature():
         - Point in polygon relationship determined by distance of 0'''
         in_feature = tank_points
         near_table = os.path.join(self.output_gdb, self.near_table)
-        nearFeature = self.layer_path
-        near_time = time.time()
+        near_feature = self.layer_path
 
-        arcpy.GenerateNearTable_analysis(in_feature, nearFeature, near_table)
-
-        print(f'{near_table}: {time.time() - near_time}')
-
+        arcpy.GenerateNearTable_analysis(in_feature, near_feature, near_table)
         arcpy.JoinField_management(near_table, self.near_tank_id_field, tank_points, self.tank_id, [self.tank_facility_id])
 
         return near_table
@@ -405,7 +409,7 @@ class InPolygonFeature(RiskFeature):
     def update_tank_results(self):
         with arcpy.da.SearchCursor(in_table=self.near_table_path, field_names=[self.tank_facility_id, self.near_dist_field]) as cursor:
             for row in cursor:
-                tank_id = row[0]
+                self.tank_id = row[0]
                 TankResult.update_tank_value_and_score(row, self.layer_name)
 
 
@@ -416,7 +420,7 @@ class DistanceFeature(RiskFeature):
     def update_tank_results(self):
         with arcpy.da.SearchCursor(in_table=self.near_table_path, field_names=[self.tank_facility_id, self.near_dist_field]) as cursor:
             for row in cursor:
-                tank_id = row[0]
+                self.tank_id = row[0]
                 TankResult.update_tank_value_and_score(row, self.layer_name)
 
 
@@ -446,42 +450,49 @@ class AttributeFeature(RiskFeature):
                 TankResult.update_tank_value_and_score(row, self.layer_name)
 
 
-class Tool():
+class TankRisk():
+    '''Primary tool class.'''
+
+    def __init__(self):
+        self.risk_feature_name_order = []
+        self.label = 'Tank Risk Assessor'
+        self.description = 'Evaluate tank risk based on spatial relationships to other data'
+        self.canRunInBackground = False
+
     def getParameterInfo(self):
         facility_ust_points = arcpy.Parameter(
             displayName='Facility UST Points',
             name='facility_ust_points',
-            datatype='GPFeatureLayer',
+            datatype='GPLayer',
             parameterType='Required',
             direction='Input',
         )
 
-        facility_ust_points = arcpy.Parameter(
+        map_name = arcpy.Parameter(
             displayName='Map Name',
-            name='map)name',
-            datatype='GPString',
+            name='map_name',
+            datatype='GPMap',
             parameterType='Required',
             direction='Input',
         )
 
         output_directory = arcpy.Parameter(
-            displayName='Output Features',
+            displayName='Output Folder',
             name='output_directory',
-            datatype='DEWorkspace',
-            parameterType='Derived',
+            datatype='DEFolder',
+            parameterType='Required',
             direction='Output',
         )
 
-        return [facility_ust_points, map_name, output_directory]
+        params = [facility_ust_points, map_name, output_directory]
+
+        return params
 
     def isLicensed(self):
         """Set whether tool is licensed to execute."""
         license_level = arcpy.ProductInfo()
 
-        if license_level != 'ArcInfo':
-            message.AddErrorMessage('Invalid license level: ArcGIS for Desktop Advanced required')
-
-        return license_level != 'ArcInfo'
+        return license_level == 'ArcInfo'
 
     def updateParameters(self, parameters):
         """Modify the values and properties of parameters before internal
@@ -495,11 +506,11 @@ class Tool():
         return
 
     def execute(self, parameters, messages):
-        facility_ust_points = parameters[0]
-        map_name = parameters[1]
-        output_directory = parameters[2]
+        facility_ust_points = parameters[0].value
+        map_name = parameters[1].value
+        output_directory = str(parameters[2].value)
 
-        message.AddMessage(f'Version {version}')
+        messages.AddMessage(f'Version {VERSION}')
 
         Outputs.set_output_directory(output_directory)
         arcpy.Delete_management(Outputs.temp_dir)
@@ -510,26 +521,14 @@ class Tool():
         completed = tank_risk_assessor.start(facility_ust_points, 'CURRENT', map_name, messages)
 
         if completed:
-            message.AddMessage('Risk assessment results created')
+            messages.AddMessage('Risk assessment results created')
         else:
-            message.AddErrorMessage('Risk assessment failed')
+            messages.AddErrorMessage('Risk assessment failed')
 
         arcpy.Delete_management(Outputs.temp_dir)
 
-        print(time.time() - start_time)
+        messages.AddMessage(f'Total processing time {format_time(time.time() - start_time)}')
 
-        self.start(facility_ust_points, 'CURRENT', messages)
-
-
-
-class TankRisk(Tool):
-    '''Primary tool class.'''
-
-    def __init__(self):
-        self.risk_feature_name_order = []
-        self.label = 'Tank Risk Assessor'
-        self.description = 'Evaluate tank risk based on spatial relationships to other data'
-        self.canRunInBackground = False
 
     def parse_name(self, risk_feature):
         file_name = risk_feature.split('.')
@@ -540,14 +539,14 @@ class TankRisk(Tool):
             return file_name[-1]
 
     def risk_feature_factory(self, risk_feature):
-        featureName = self.parse_name(risk_feature.name)
+        feature_name = self.parse_name(risk_feature.name)
 
-        if TankResult.attributes_for_feature[featureName].type == TankResult.IN_POLYGON:
-            return InPolygonFeature(risk_feature, featureName, Outputs.temp_gdb)
-        elif TankResult.attributes_for_feature[featureName].type == TankResult.DISTANCE:
-            return DistanceFeature(risk_feature, featureName, Outputs.temp_gdb)
-        elif TankResult.attributes_for_feature[featureName].type == TankResult.ATTRIBUTE:
-            return AttributeFeature(risk_feature, featureName, Outputs.temp_gdb, TankResult.attributes_for_feature[featureName].calc_fields)
+        if TankResult.attributes_for_feature[feature_name].type == TankResult.IN_POLYGON:
+            return InPolygonFeature(risk_feature, feature_name, Outputs.temp_gdb)
+        elif TankResult.attributes_for_feature[feature_name].type == TankResult.DISTANCE:
+            return DistanceFeature(risk_feature, feature_name, Outputs.temp_gdb)
+        elif TankResult.attributes_for_feature[feature_name].type == TankResult.ATTRIBUTE:
+            return AttributeFeature(risk_feature, feature_name, Outputs.temp_gdb, TankResult.attributes_for_feature[feature_name].calc_fields)
         else:
             #: Feature not in TankResult.attributesForFeature.
 
@@ -562,7 +561,7 @@ class TankRisk(Tool):
 
         arcpy.CopyRows_management(os.path.join(Outputs.output_directory, Outputs.output_csv_name), os.path.join(Outputs.output_gdb, Outputs.output_table_name))
 
-    def check_fields(self, risk_features):
+    def check_fields(self, risk_features, messages):
         for risk_feature in risk_features:
             feature_name = self.parse_name(risk_feature.name)
 
@@ -580,17 +579,12 @@ class TankRisk(Tool):
                     raise ValueError('Required fields not found')
 
     def start(self, tank_points, pro_project, map_name, messages):
-        messages.AddMessage('accessing pro map')
         map_doc = MapSource(pro_project, map_name)
-
-        messages.AddMessage('finding visible layers')
-        risk_features = map_doc.get_selected_layers()
+        risk_features = map_doc.get_selected_layers(messages)
 
         #: Check for missing fields in attribute layers.
         try:
-
-            messages.AddMessage('checking fields')
-            self.check_fields(risk_features)
+            self.check_fields(risk_features, messages)
         except ValueError:
             return False
 
@@ -598,88 +592,39 @@ class TankRisk(Tool):
             start_time = time.time()
             feature_name = self.parse_name(feature.name)
 
-            if feature_name == self.parse_name(tank_points):
+            if feature_name == self.parse_name(tank_points.name):
                 #: Tank points are not a risk feature.
 
                 continue
 
             if feature_name not in TankResult.attributes_for_feature:
                 #: The riskFeatureFactory should not receive unknown layers.
-                messages.AddWarningMessage(f'Unknown risk layer: {feature_name}')
+                messages.AddWarningMessage(f'Unknown risk layer {feature_name}')
 
                 continue
 
-            messages.AddMessage(f'Processing: {feature_name}')
+            messages.AddMessage(f'Calculating risks from {feature_name}')
 
             risk_feature = self.risk_feature_factory(feature)
             #: Keep track of name order for output field ordering.
             self.risk_feature_name_order.append(risk_feature.layer_name)
 
             risk_feature.create_near_table(tank_points)
-            stop_time = time.time()
-
             risk_feature.update_tank_results()
 
-            messages.AddMessage('  -Completed: {} Time: {:.2f} sec'.format(feature_name, time.time() - start_time))
+            messages.AddMessage(f'Finished in {format_time(time.time() - start_time)}')
 
-            print(f'results: {time.time() - stop_time}')
-
-        resultRows = TankResult.get_output_rows(self.risk_feature_name_order)
-        self.create_output_table(resultRows)
+        result_rows = TankResult.get_output_rows(self.risk_feature_name_order)
+        self.create_output_table(result_rows)
 
         return True
 
-
-class Logger():
-    def AddMessage(self, string):
-        print(string)
-    def AddWarningMessage(self, string):
-        print(string)
-    def AddErrorMessage(self, string):
-        print(string)
 
 class Toolbox():
 
     def __init__(self):
         self.label = 'Tank Risk'
-        self.alias = ''
+        self.alias = 'Tank Risk'
 
         # List of tool classes associated with this toolbox
         self.tools = [TankRisk]
-
-
-if __name__ == '__main__':
-    version = '2.0.0'
-
-    project_root = pathlib.Path(__file__).resolve().parent.parent
-    pro_project_dir = project_root.joinpath('proproject')
-    pro_project = pro_project_dir.joinpath('TankRisk', 'TankRisk.aprx')
-
-    map_document = str(pro_project)
-    facility_ust_points = str(pro_project_dir.joinpath('sgid.agrc.utah.gov.sde', 'SGID10.ENVIRONMENT.FACILITYUST'))
-    output_directory = str(pro_project_dir.joinpath('outputs'))
-    map_name = 'Layers'
-
-    print(f'Version {version}')
-    license_level = arcpy.ProductInfo()
-
-    if license_level != 'ArcInfo':
-        print('Invalid license level: ArcGIS for Desktop Advanced required')
-
-    Outputs.set_output_directory(output_directory)
-    arcpy.Delete_management(Outputs.temp_dir)
-
-    start_time = time.time()
-
-    messages = Logger()
-    tank_risk_assessor = TankRisk()
-    completed = tank_risk_assessor.start(facility_ust_points, map_document, map_name, messages)
-
-    if completed:
-        print('Risk assessment results created')
-    else:
-        print('Risk assessment failed')
-
-    arcpy.Delete_management(Outputs.temp_dir)
-
-    print(time.time() - start_time)
