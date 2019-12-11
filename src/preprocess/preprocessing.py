@@ -8,15 +8,14 @@ A module that adds layers to a map
 
 import os
 import pathlib
-import time
 import sys
 
 from tqdm import tqdm
 
 import arcpy
 
-tank_layer = 'SGID10.ENVIRONMENT.FACILITYUST'
-risk_layers = [
+TANK_LAYER = 'SGID10.ENVIRONMENT.FACILITYUST'
+RISK_LAYERS = [
     'SGID10.ENVIRONMENT.DWQAssessedWaters',
     'SGID10.WATER.StreamsNHDHighRes',
     'SGID10.WATER.LakesNHDHighRes',
@@ -30,12 +29,10 @@ risk_layers = [
 
 
 def add_layers_to_map(project_path, workspace):
-    import pdb; pdb.set_trace()
-
     project = arcpy.mp.ArcGISProject(project_path)
     risk_map = project.listMaps('RiskMap')[0]
 
-    for layer_name in tqdm(risk_layers):
+    for layer_name in tqdm(RISK_LAYERS):
         risk_map.addDataFromPath(os.path.join(workspace, layer_name))
 
     project.save()
