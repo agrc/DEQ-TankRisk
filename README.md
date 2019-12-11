@@ -1,23 +1,28 @@
-# DEQ-TankRisk
+# DEQ Tank Risk Assessment Tool
 
-## DEQ Tank Risk Assessment Tool
+This project is for an ArcGIS Pro python tool that calculates a relationship between facilities with underground storage tanks with a variety of statewide environmental features.
 
-ArcGIS Pro python tool that calculates a relationship between facilities with underground storage tanks and a variety of statewide environmental features.
+## Usage
 
-**Requires Advanced license level.**
+1. Go to releases tab and download `tank_risk_tool.*.zip` from the assests
+1. Unip the tool and add it to your pro project from the catalog pane
+1. Add the following layers to your map. **Feature names must be exact.** Layers that are **not visible** will **not** be included in the analysis.
+   - Aquifer_RechargeDischargeAreas
+   - ShallowGroundWater
+   - SurfaceWaterZones
+   - StreamsNHDHighRes
+   - DWQAssessmentUnits
+   - Wetlands
+   - CensusTracts2010
+   - GroundWaterZones
+   - wrpod
+   - Soils
+   - LakesNHDHighRes
+1. Run the tool with the parameters
+   - Select the Facility UST layer
+   - Select the map name that has the risk factor layers
+   - Choose the output folder where the risk values are stored
 
-### Recognized Features
+### Prerequisites
 
-- Aquifer_RechargeDischargeAreas
-- ShallowGroundWater
-- SurfaceWaterZones
-- StreamsNHDHighRes
-- DWQAssessmentUnits
-- Wetlands
-- CensusTracts2010
-- GroundWaterZones
-- wrpod
-- Soils
-- LakesNHDHighRes
-
-**Feature names must be exact.**
+1. An advanced license level
