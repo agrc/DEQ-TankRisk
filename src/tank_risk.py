@@ -11,7 +11,7 @@ import time
 import arcpy
 
 
-VERSION = '2.0.0'
+VERSION = '2.0.0-beta.1'
 
 
 def format_time(seconds):
