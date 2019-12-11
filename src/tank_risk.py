@@ -446,15 +446,7 @@ class AttributeFeature(RiskFeature):
                 TankResult.update_tank_value_and_score(row, self.layer_name)
 
 
-class TankRisk():
-    '''Primary tool class.'''
-
-    def __init__(self):
-        self.risk_feature_name_order = []
-        self.label = 'Tank Risk Assessor'
-        self.description = 'Evaluate tank risk based on spatial relationships to other data'
-        self.canRunInBackground = False
-
+class Tool():
     def getParameterInfo(self):
         facility_ust_points = arcpy.Parameter(
             displayName='Facility UST Points',
@@ -482,16 +474,32 @@ class TankRisk():
 
         return [facility_ust_points, map_name, output_directory]
 
+    def isLicensed(self):
+        """Set whether tool is licensed to execute."""
+        license_level = arcpy.ProductInfo()
+
+        if license_level != 'ArcInfo':
+            message.AddErrorMessage('Invalid license level: ArcGIS for Desktop Advanced required')
+
+        return license_level != 'ArcInfo'
+
+    def updateParameters(self, parameters):
+        """Modify the values and properties of parameters before internal
+        validation is performed.  This method is called whenever a parameter
+        has been changed."""
+        return
+
+    def updateMessages(self, parameters):
+        """Modify the messages created by internal validation for each tool
+        parameter.  This method is called after internal validation."""
+        return
+
     def execute(self, parameters, messages):
         facility_ust_points = parameters[0]
         map_name = parameters[1]
         output_directory = parameters[2]
 
         message.AddMessage(f'Version {version}')
-        license_level = arcpy.ProductInfo()
-
-        if license_level != 'ArcInfo':
-            message.AddErrorMessage('Invalid license level: ArcGIS for Desktop Advanced required')
 
         Outputs.set_output_directory(output_directory)
         arcpy.Delete_management(Outputs.temp_dir)
@@ -511,6 +519,17 @@ class TankRisk():
         print(time.time() - start_time)
 
         self.start(facility_ust_points, 'CURRENT', messages)
+
+
+
+class TankRisk(Tool):
+    '''Primary tool class.'''
+
+    def __init__(self):
+        self.risk_feature_name_order = []
+        self.label = 'Tank Risk Assessor'
+        self.description = 'Evaluate tank risk based on spatial relationships to other data'
+        self.canRunInBackground = False
 
     def parse_name(self, risk_feature):
         file_name = risk_feature.split('.')
