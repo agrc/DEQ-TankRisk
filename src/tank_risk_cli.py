@@ -52,8 +52,6 @@ def test():
 
     arcpy.Delete_management(Outputs.temp_dir)
 
-    print(time.time() - start_time)
-
 
 if __name__ == '__main__':
     test()
