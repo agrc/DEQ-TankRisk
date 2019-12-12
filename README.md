@@ -4,8 +4,8 @@ This project is for an ArcGIS Pro python tool that calculates a relationship bet
 
 ## Usage
 
-1. Go to releases tab and download `tank_risk_tool.*.zip` from the assests
-1. Unip the tool and add it to your pro project from the catalog pane
+1. Go to releases tab and download `tank_risk_tool.*.zip` from the assets
+1. Unzip the tool and add it to your pro project from the catalog pane
 1. Add the following layers to your map. **Feature names must be exact.** Layers that are **not visible** will **not** be included in the analysis.
    - Aquifer_RechargeDischargeAreas
    - ShallowGroundWater
