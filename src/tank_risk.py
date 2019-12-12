@@ -11,7 +11,7 @@ import time
 import arcpy
 
 
-VERSION = '2.0.0-beta.1'
+VERSION = '2.0.0-beta.2'
 
 
 def format_time(seconds):
@@ -45,7 +45,7 @@ class MapSource():
 
         for layer in self.risk_map.listLayers():
             if not layer.visible:
-                messages.AddWarningMessage(f'Skipping risk calculation for {layer.name}. Reason visibility=false')
+                messages.AddWarningMessage(f'Skipping {layer.name}, reason visibility')
 
                 continue
 
@@ -323,7 +323,7 @@ class TankResult():
             else:
                 score = 0
 
-            if tank.getSevForLayer(layer_name) < score:
+            if tank.get_severity_for_layer(layer_name) and tank.get_severity_for_layer(layer_name) < score:
                 tank.set_value_for_layer(layer_name, value)
                 tank.set_severity_for_layer(layer_name, score)
 
