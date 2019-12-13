@@ -6,10 +6,10 @@ ArcGIS script tool for evaluating tank risk based on spatial relationships to ot
 '''
 import csv
 import os
+from pathlib import WindowsPath
 import time
 
 import arcpy
-
 
 VERSION = '2.0.0-beta.2'
 
@@ -489,20 +489,30 @@ class TankRisk():
         return params
 
     def isLicensed(self):
-        """Set whether tool is licensed to execute."""
+        '''Set whether tool is licensed to execute.'''
         license_level = arcpy.ProductInfo()
 
         return license_level == 'ArcInfo'
 
     def updateParameters(self, parameters):
-        """Modify the values and properties of parameters before internal
+        '''Modify the values and properties of parameters before internal
         validation is performed.  This method is called whenever a parameter
-        has been changed."""
+        has been changed. '''
+        if not parameters[2].value or not parameters[2].altered:
+            return
+
+        path = WindowsPath(str(parameters[2].value))
+
+        if not path.exists() or len(os.listdir(path)) == 0:
+          return
+
+        parameters[2].value = str(path.joinpath(time.strftime('%Y%m%d%H%M%S')))
+
         return
 
     def updateMessages(self, parameters):
-        """Modify the messages created by internal validation for each tool
-        parameter.  This method is called after internal validation."""
+        '''Modify the messages created by internal validation for each tool
+        parameter.  This method is called after internal validation.'''
         return
 
     def execute(self, parameters, messages):
@@ -528,7 +538,6 @@ class TankRisk():
         arcpy.Delete_management(Outputs.temp_dir)
 
         messages.AddMessage(f'Total processing time {format_time(time.time() - start_time)}')
-
 
     def parse_name(self, risk_feature):
         file_name = risk_feature.split('.')
