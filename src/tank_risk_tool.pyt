@@ -10,7 +10,7 @@ import time
 
 import arcpy
 
-VERSION = '2.0.0-beta.2'
+VERSION = '2.0.0-beta.3'
 
 
 def format_time(seconds):
