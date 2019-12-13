@@ -6,7 +6,6 @@ ArcGIS script tool for evaluating tank risk based on spatial relationships to ot
 '''
 import csv
 import os
-from pathlib import WindowsPath
 import time
 
 import arcpy
@@ -481,7 +480,7 @@ class TankRisk():
             name='output_directory',
             datatype='DEFolder',
             parameterType='Required',
-            direction='Output',
+            direction='Input',
         )
 
         params = [facility_ust_points, map_name, output_directory]
@@ -498,15 +497,6 @@ class TankRisk():
         '''Modify the values and properties of parameters before internal
         validation is performed.  This method is called whenever a parameter
         has been changed. '''
-        if not parameters[2].value or not parameters[2].altered:
-            return
-
-        path = WindowsPath(str(parameters[2].value))
-
-        if not path.exists() or len(os.listdir(path)) == 0:
-          return
-
-        parameters[2].value = str(path.joinpath(time.strftime('%Y%m%d%H%M%S')))
 
         return
 
