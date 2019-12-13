@@ -322,7 +322,7 @@ class TankResult():
             else:
                 score = 0
 
-            if tank.get_severity_for_layer(layer_name) and tank.get_severity_for_layer(layer_name) < score:
+            if not tank.get_severity_for_layer(layer_name) or tank.get_severity_for_layer(layer_name) < score:
                 tank.set_value_for_layer(layer_name, value)
                 tank.set_severity_for_layer(layer_name, score)
 
