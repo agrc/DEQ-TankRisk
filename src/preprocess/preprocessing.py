@@ -7,43 +7,62 @@ A module that adds layers to a map
 
 
 import os
-import pathlib
+from pathlib import Path
 import sys
 
 from tqdm import tqdm
 
 import arcpy
 
-TANK_LAYER = 'SGID10.ENVIRONMENT.FACILITYUST'
+TANK_LAYER = 'opensgid.environment.deq_underground_storage_tanks'
 RISK_LAYERS = [
-    'SGID10.ENVIRONMENT.DWQAssessedWaters',
-    'SGID10.WATER.StreamsNHDHighRes',
-    'SGID10.WATER.LakesNHDHighRes',
-    'SGID10.DEMOGRAPHIC.CensusTracts2010',
-    'SGID10.GEOSCIENCE.ShallowGroundWater',
-    'SGID10.GEOSCIENCE.Soils',
-    'SGID10.ENVIRONMENT.DWQAssessmentUnits',
-    'SGID10.WATER.Wetlands',
-    'SGID10.GEOSCIENCE.Aquifer_RechargeDischargeAreas',
+    'opensgid.environment.dwq_assessment_units',
+    'opensgid.water.streams_nhd',
+    'opensgid.water.lakes_nhd',
+    'opensgid.demographic.census_tracts_2010',
+    'opensgid.geoscience.shallow_ground_water',
+    'https://services1.arcgis.com/99lidPhWCzftIe9K/arcgis/rest/services/Utah_Soils/FeatureServer/0',  #: utah soils
+    'opensgid.environment.dwq_assessment_units',
+    'opensgid.water.wetlands',
+    'opensgid.geoscience.aquifer_recharge_discharge_areas',
+    'https://services.arcgis.com/ZzrwjTRez6FJiOq4/arcgis/rest/services/PODView/FeatureServer/0'  #: points of diversion
 ]
 
 
 def add_layers_to_map(project_path, workspace):
     project = arcpy.mp.ArcGISProject(project_path)
-    risk_map = project.listMaps('RiskMap')[0]
-
+    try:
+        risk_map = project.listMaps('RiskMap')[0]
+    except IndexError:
+        print('Create a map called RiskMap')
+        return
+    RISK_LAYERS.append(TANK_LAYER)
     for layer_name in tqdm(RISK_LAYERS):
-        risk_map.addDataFromPath(os.path.join(workspace, layer_name))
+        if layer_name.startswith('opensgid'):
+            risk_map.addDataFromPath(os.path.join(workspace, layer_name))
+            continue
+        if layer_name.startswith('http'):
+            risk_map.addDataFromPath(layer_name)
+            continue
+
+        data_file = Path(layer_name)
+        try:
+            path = data_file.resolve(strict=True)
+        except FileNotFoundError:
+            print(f'{layer_name} was not found')
+            return
+
+        risk_map.addDataFromPath(str(path))
 
     project.save()
 
 
 if __name__ == '__main__':
-    project_root = pathlib.Path(__file__).resolve().parent.parent.parent
+    project_root = Path(__file__).resolve().parent.parent.parent
 
     pro_project_dir = project_root.joinpath('proproject')
     pro_project = pro_project_dir.joinpath('TankRisk', 'TankRisk.aprx')
-    sde_path = pro_project_dir.joinpath('sgid.agrc.utah.gov.sde')
+    sde_path = pro_project_dir.joinpath('opensgid.agrc.utah.gov.sde')
 
     if not pro_project.exists():
         print(f'could not find pro project in {pro_project}')
@@ -51,7 +70,7 @@ if __name__ == '__main__':
         sys.exit(-1)
 
     if not sde_path.exists():
-        print(f'could not find sgid10 sde in {sde_path}')
+        print(f'could not find sgid sde in {sde_path}')
 
         sys.exit(-1)
 
