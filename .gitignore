@@ -62,3 +62,5 @@ proproject/TankRisk/Index/
 .ropeproject/
 proproject/sgid.agrc.utah.gov.sde
 proproject/TankRisk/.pyHistory
+
+.pytest_cache/
