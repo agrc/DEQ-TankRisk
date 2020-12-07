@@ -7,10 +7,11 @@ ArcGIS script tool for evaluating tank risk based on spatial relationships to ot
 import csv
 import os
 import time
+from pathlib import Path
 
 import arcpy
 
-VERSION = '2.0.0'
+VERSION = '2.0.1'
 
 
 def format_time(seconds):
@@ -131,23 +132,17 @@ class TankResult():
 
     #: attributesForFeature associates feature names with attributes
     attributes_for_feature = {
-        'Aquifer_RechargeDischargeAreas': LayerAttributes(ATTRIBUTE, 'aquiferVal', 'aquiferSev', 'aquiferVal', 'aquiferSev', ['ZONE']),
-        'Wetlands': LayerAttributes(IN_POLYGON, 'wetLandsVal', 'wetLandsSev', 'wetLandsVal', 'wetLandsSev'),
-        'LakesNHDHighRes': LayerAttributes(DISTANCE, 'lakesVal', 'lakeSev', 'lakesVal', 'lakeSev'),
-        'StreamsNHDHighRes': LayerAttributes(DISTANCE, 'streamsVal', 'streamsSev', 'streamsVal', 'streamsSev'),
-        'DWQAssessmentUnits': LayerAttributes(ATTRIBUTE, 'assessmentVal', 'assessmentSev', 'assessmentVal', 'assessmentSev', ['STATUS2006']),
-        'Soils': LayerAttributes(ATTRIBUTE, 'soilVal', 'soilSev', 'soilVal', 'soilSev', ['TEX_DEF']),
-        'ShallowGroundWater': LayerAttributes(ATTRIBUTE, 'shallowWaterVal', 'shallowWaterSev', 'shallowWaterVal', 'shallowWaterSev', ['DEPTH']),
-        'CensusTracts2010': LayerAttributes(ATTRIBUTE, 'censusVal', 'censusSev', 'censusVal', 'censusSev', ['POP100', 'AREALAND']),
-        'GroundWaterZones': LayerAttributes(ATTRIBUTE, 'udwspzVal', 'udwspzSev', 'udwspzVal', 'udwspzSev', ['ProtZone']),
-        'SurfaceWaterZones': LayerAttributes(ATTRIBUTE, 'udwspzVal', 'udwspzSev', 'udwspzVal', 'udwspzSev', ['ProtZone']),
-        'wrpod': LayerAttributes(
-            DISTANCE,  #Also known as PointsOfDiversion
-            'podVal',
-            'podSev',
-            'podVal',
-            'podSev'
-        )
+        'aquifer_recharge_discharge_areas': LayerAttributes(ATTRIBUTE, 'aquiferVal', 'aquiferSev', 'aquiferVal', 'aquiferSev', ['zone']),
+        'wetlands': LayerAttributes(IN_POLYGON, 'wetLandsVal', 'wetLandsSev', 'wetLandsVal', 'wetLandsSev'),
+        'lakes_nhd': LayerAttributes(DISTANCE, 'lakesVal', 'lakeSev', 'lakesVal', 'lakeSev'),
+        'streams_nhd': LayerAttributes(DISTANCE, 'streamsVal', 'streamsSev', 'streamsVal', 'streamsSev'),
+        'dwq_assessment_units': LayerAttributes(ATTRIBUTE, 'assessmentVal', 'assessmentSev', 'assessmentVal', 'assessmentSev', ['status2006']),
+        'soil': LayerAttributes(ATTRIBUTE, 'soilVal', 'soilSev', 'soilVal', 'soilSev', ['tex_def']),
+        'shallow_ground_water': LayerAttributes(ATTRIBUTE, 'shallowWaterVal', 'shallowWaterSev', 'shallowWaterVal', 'shallowWaterSev', ['depth']),
+        'census_tracts_2010': LayerAttributes(ATTRIBUTE, 'censusVal', 'censusSev', 'censusVal', 'censusSev', ['pop100', 'arealand']),
+        'GroundWaterZones': LayerAttributes(ATTRIBUTE, 'udwspzVal', 'udwspzSev', 'udwspzVal', 'udwspzSev', ['protzone']),
+        'SurfaceWaterZones': LayerAttributes(ATTRIBUTE, 'udwspzVal', 'udwspzSev', 'udwspzVal', 'udwspzSev', ['protzone']),
+        'points_of_diversion': LayerAttributes(DISTANCE, 'podVal', 'podSev', 'podVal', 'podSev')
     }
 
     def __init__(self, tank_id):
@@ -222,9 +217,10 @@ class TankResult():
 
         tank = TankResult.tank_results[tank_id]
 
-        if layer_name == 'Aquifer_RechargeDischargeAreas':
+        if layer_name == 'aquifer_recharge_discharge_areas':
             value = str(row[1])
 
+            print(f'aquifer_recharge_discharge_areas: {value}')
             if value == 'Discharge':
                 score = 1
             elif value == 'Secondary recharge':
@@ -235,56 +231,59 @@ class TankResult():
                 #: 'Bedrock recharge'
                 score = 0
 
+            print(f'aquifer_recharge_discharge_areas score: {score}')
             tank.set_value_for_layer(layer_name, value)
             tank.set_severity_for_layer(layer_name, score)
 
-        elif layer_name == 'Wetlands':
+        elif layer_name == 'wetlands':
             value, score = TankResult.in_polygon_value_and_score(row[1])
 
             tank.set_value_for_layer(layer_name, value)
             tank.set_severity_for_layer(layer_name, score)
 
-        elif layer_name == 'LakesNHDHighRes':
+        elif layer_name == 'lakes_nhd':
             value = row[1]
             score = TankResult.distance_score(row[1])
 
             tank.set_value_for_layer(layer_name, value)
             tank.set_severity_for_layer(layer_name, score)
 
-        elif layer_name == 'StreamsNHDHighRes':
+        elif layer_name == 'streams_nhd':
             value = row[1]
             score = TankResult.distance_score(row[1])
 
             tank.set_value_for_layer(layer_name, value)
             tank.set_severity_for_layer(layer_name, score)
 
-        elif layer_name == 'DWQAssessmentUnits':
+        elif layer_name == 'dwq_assessment_units':
             status = str(row[1])
             value = status
 
+            print(f'dwq_assessment_units status: {status}')
             if status == 'Fully Supporting':
                 score = 2
             elif status == 'Impaired' or status == 'Not Assessed':
                 score = 5
 
+            print(f'dwq_assessment_units score: {score}')
             tank.set_value_for_layer(layer_name, value)
             tank.set_severity_for_layer(layer_name, score)
 
-        elif layer_name == 'Soils':
+        elif layer_name == 'soil':
             texture = row[1]
             value = texture
 
             tank.set_value_for_layer(layer_name, value)
             tank.set_severity_for_layer(layer_name, score)
 
-        elif layer_name == 'ShallowGroundWater':
+        elif layer_name == 'shallow_ground_water':
             depth = row[1]
             value = depth
 
             tank.set_value_for_layer(layer_name, value)
             tank.set_severity_for_layer(layer_name, score)
 
-        elif layer_name == 'CensusTracts2010':
+        elif layer_name == 'census_tracts_2010':
             value = float(row[1]) / float(row[2])
 
             if value > 0.00181:
@@ -326,7 +325,7 @@ class TankResult():
                 tank.set_value_for_layer(layer_name, value)
                 tank.set_severity_for_layer(layer_name, score)
 
-        elif layer_name == 'wrpod':
+        elif layer_name == 'points_of_diversion':
             value = row[1]
             score = TankResult.distance_score(row[1])
 
@@ -383,8 +382,8 @@ class RiskFeature():
         self.near_dist_field = 'NEAR_DIST'
         self.near_tank_id_field = 'IN_FID'
         self.near_risk_id_field = 'NEAR_FID'
-        self.tank_id = 'OBJECTID'
-        self.tank_facility_id = 'FACILITYID'
+        self.tank_id = arcpy.Describe(layer_path).OIDFieldName
+        self.tank_facility_id = 'facilityid'
         self.output_gdb = output_gdb
 
     def create_near_table(self, tank_points):
@@ -396,7 +395,8 @@ class RiskFeature():
         near_feature = self.layer_path
 
         arcpy.GenerateNearTable_analysis(in_feature, near_feature, near_table)
-        arcpy.JoinField_management(near_table, self.near_tank_id_field, tank_points, self.tank_id, [self.tank_facility_id])
+        tank_join_id = arcpy.Describe(tank_points).OIDFieldName
+        arcpy.JoinField_management(near_table, self.near_tank_id_field, tank_points, tank_join_id, [self.tank_facility_id])
 
         return near_table
 
@@ -529,7 +529,57 @@ class TankRisk():
 
         messages.AddMessage(f'Total processing time {format_time(time.time() - start_time)}')
 
-    def parse_name(self, risk_feature):
+    def parse_name(self, layer):
+        layer_lookup = {
+            'https://services1.arcgis.com/99lidphwczftie9k/arcgis/rest/services/facilityust/featureserver/0': 'tanks',
+            'https://services.arcgis.com/zzrwjtrez6fjioq4/arcgis/rest/services/podview/featureserver/0': 'points_of_diversion',
+            'https://services1.arcgis.com/99lidphwczftie9k/arcgis/rest/services/utah_soils/featureserver/0': 'soil',
+            'https://services1.arcgis.com/99lidphwczftie9k/arcgis/rest/services/aquifer_rechargedischargeareas/featureserver/0': 'aquifer_recharge_discharge_areas',
+            'https://services1.arcgis.com/99lidphwczftie9k/arcgis/rest/services/wetlands/featureserver/0': 'wetlands',
+            'https://services1.arcgis.com/99lidphwczftie9k/arcgis/rest/services/dwqassessmentunits/featureserver/0': 'dwq_assessment_units',
+            'https://services1.arcgis.com/99lidphwczftie9k/arcgis/rest/services/shallowgroundwater/featureserver/0': 'shallow_ground_water',
+            'https://services1.arcgis.com/99lidphwczftie9k/arcgis/rest/services/censustracts2010/featureserver/0': 'census_tracts_2010',
+            'https://services1.arcgis.com/99lidphwczftie9k/arcgis/rest/services/utahlakesnhd/featureserver/0': 'lakes_nhd',
+            'https://services1.arcgis.com/99lidphwczftie9k/arcgis/rest/services/utahstreamsnhd/featureserver/0': 'streams_nhd',
+            'deq_underground_storage_tanks': 'tanks',
+            'aquifer_recharge_discharge_areas': 'aquifer_recharge_discharge_areas',
+            'wetlands': 'wetlands',
+            'dwq_assessment_units': 'dwq_assessment_units',
+            'shallow_ground_water': 'shallow_ground_water',
+            'census_tracts_2010': 'census_tracts_2010',
+            'lakes_nhd': 'lakes_nhd',
+            'streams_nhd': 'streams_nhd',
+        }
+
+        if not layer.isFeatureLayer:
+            return
+
+        if layer.isWebLayer:
+            if (layer.dataSource.casefold() in layer_lookup):
+                return layer_lookup[layer.dataSource.casefold()]
+
+        props = layer.connectionProperties
+        if props['workspace_factory'] == 'File Geodatabase':
+
+            if props['dataset'] == 'SurfaceWaterZones':
+                return 'SurfaceWaterZones'
+
+            if props['dataset'] == 'GroundWaterZones':
+                return 'GroundWaterZones'
+
+        if props['workspace_factory'] == 'SDE':
+            if props['connection_info']['db_connection_properties'] != 'opensgid.agrc.utah.gov':
+                return
+
+            dataset = props['dataset']
+            table_name = dataset.split('.')[-1:][0].strip('%')
+
+            if (table_name in layer_lookup):
+                return layer_lookup[table_name]
+
+        return
+
+    def parse_name_old(self, risk_feature):
         file_name = risk_feature.split('.')
 
         if file_name[-1].lower() == 'shp':
@@ -538,7 +588,7 @@ class TankRisk():
             return file_name[-1]
 
     def risk_feature_factory(self, risk_feature):
-        feature_name = self.parse_name(risk_feature.name)
+        feature_name = self.parse_name(risk_feature)
 
         if TankResult.attributes_for_feature[feature_name].type == TankResult.IN_POLYGON:
             return InPolygonFeature(risk_feature, feature_name, Outputs.temp_gdb)
@@ -562,10 +612,10 @@ class TankRisk():
 
     def check_fields(self, risk_features, messages):
         for risk_feature in risk_features:
-            feature_name = self.parse_name(risk_feature.name)
+            feature_name = self.parse_name(risk_feature)
 
             if feature_name in TankResult.attributes_for_feature and TankResult.attributes_for_feature[feature_name].type == TankResult.ATTRIBUTE:
-                field_names = [field.name for field in arcpy.ListFields(risk_feature)]
+                field_names = [field.name.lower() for field in arcpy.ListFields(risk_feature)]
                 calc_fields = TankResult.attributes_for_feature[feature_name].calc_fields
                 missing_field = False
 
@@ -589,9 +639,9 @@ class TankRisk():
 
         for feature in risk_features:
             single_risk = time.time()
-            feature_name = self.parse_name(feature.name)
+            feature_name = self.parse_name(feature)
 
-            if feature_name == self.parse_name(tank_points.name):
+            if feature_name == self.parse_name(tank_points):
                 #: Tank points are not a risk feature.
 
                 continue
