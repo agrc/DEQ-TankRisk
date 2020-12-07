@@ -83,8 +83,6 @@ class Outputs():
 
         Outputs.output_directory = output_dir
         if not os.path.exists(output_dir):
-            print(f'{output_dir} does not exits. creating now')
-
             os.makedirs(output_dir)
 
         Outputs.output_gdb_name = 'TankRisk_{}.gdb'.format(Outputs.unique_time_string)
@@ -220,7 +218,6 @@ class TankResult():
         if layer_name == 'aquifer_recharge_discharge_areas':
             value = str(row[1])
 
-            print(f'aquifer_recharge_discharge_areas: {value}')
             if value == 'Discharge':
                 score = 1
             elif value == 'Secondary recharge':
@@ -231,7 +228,6 @@ class TankResult():
                 #: 'Bedrock recharge'
                 score = 0
 
-            print(f'aquifer_recharge_discharge_areas score: {score}')
             tank.set_value_for_layer(layer_name, value)
             tank.set_severity_for_layer(layer_name, score)
 
@@ -259,13 +255,11 @@ class TankResult():
             status = str(row[1])
             value = status
 
-            print(f'dwq_assessment_units status: {status}')
             if status == 'Fully Supporting':
                 score = 2
             elif status == 'Impaired' or status == 'Not Assessed':
                 score = 5
 
-            print(f'dwq_assessment_units score: {score}')
             tank.set_value_for_layer(layer_name, value)
             tank.set_severity_for_layer(layer_name, score)
 
