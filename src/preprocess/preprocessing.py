@@ -19,7 +19,7 @@ RISK_LAYERS = [
     'opensgid.environment.dwq_assessment_units',
     'opensgid.water.streams_nhd',
     'opensgid.water.lakes_nhd',
-    'opensgid.demographic.census_tracts_2010',
+    'opensgid.demographic.census_tracts_2020',
     'opensgid.geoscience.shallow_ground_water',
     'https://services1.arcgis.com/99lidPhWCzftIe9K/arcgis/rest/services/Utah_Soils/FeatureServer/0',  #: utah soils
     'opensgid.environment.dwq_assessment_units',
