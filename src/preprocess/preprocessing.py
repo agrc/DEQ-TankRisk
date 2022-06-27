@@ -21,7 +21,7 @@ RISK_LAYERS = [
     'opensgid.water.lakes_nhd',
     'opensgid.demographic.census_tracts_2020',
     'opensgid.geoscience.shallow_ground_water',
-    'https://services1.arcgis.com/99lidPhWCzftIe9K/arcgis/rest/services/Utah_Soils/FeatureServer/0',  #: utah soils
+    'https://services1.arcgis.com/99lidPhWCzftIe9K/arcgis/rest/services/Soils/FeatureServer/0',  #: soils
     'opensgid.environment.dwq_assessment_units',
     'opensgid.water.wetlands',
     'opensgid.geoscience.aquifer_recharge_discharge_areas',
