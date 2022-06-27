@@ -6,9 +6,8 @@ A module that adds layers to a map
 '''
 
 
-import os
 from pathlib import Path
-import sys
+from sys import exit
 
 from tqdm import tqdm
 
@@ -40,7 +39,7 @@ def add_layers_to_map(project_path, workspace):
     RISK_LAYERS.append(TANK_LAYER)
     for layer_name in tqdm(RISK_LAYERS):
         if layer_name.startswith('opensgid'):
-            risk_map.addDataFromPath(os.path.join(workspace, layer_name))
+            risk_map.addDataFromPath(str(Path(workspace) / layer_name))
             continue
         if layer_name.startswith('http'):
             risk_map.addDataFromPath(layer_name)
@@ -61,18 +60,18 @@ def add_layers_to_map(project_path, workspace):
 if __name__ == '__main__':
     project_root = Path(__file__).resolve().parent.parent.parent
 
-    pro_project_dir = project_root.joinpath('proproject')
-    pro_project = pro_project_dir.joinpath('TankRisk', 'TankRisk.aprx')
-    sde_path = pro_project_dir.joinpath('opensgid.agrc.utah.gov.sde')
+    pro_project_dir = project_root / 'proproject'
+    pro_project = pro_project_dir / 'TankRisk' / 'TankRisk.aprx'
+    sde_path = pro_project_dir / 'opensgid.agrc.utah.gov.sde'
 
     if not pro_project.exists():
         print(f'could not find pro project in {pro_project}')
 
-        sys.exit(-1)
+        exit(-1)
 
     if not sde_path.exists():
         print(f'could not find sgid sde in {sde_path}')
 
-        sys.exit(-1)
+        exit(-1)
 
     add_layers_to_map(str(pro_project), str(sde_path))
