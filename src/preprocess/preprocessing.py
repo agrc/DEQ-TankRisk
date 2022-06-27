@@ -14,7 +14,7 @@ from tqdm import tqdm
 
 import arcpy
 
-TANK_LAYER = 'opensgid.environment.deq_underground_storage_tanks'
+TANK_LAYER = 'https://services1.arcgis.com/99lidPhWCzftIe9K/ArcGIS/rest/services/FacilityPST/FeatureServer/0'  #: facility pst
 RISK_LAYERS = [
     'opensgid.environment.dwq_assessment_units',
     'opensgid.water.streams_nhd',
