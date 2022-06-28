@@ -454,7 +454,7 @@ class TankRisk():
 
     def getParameterInfo(self):
         facility_ust_points = arcpy.Parameter(
-            displayName='Facility UST Points',
+            displayName='Petroleum Storage Tank Facilities Points',
             name='facility_ust_points',
             datatype='GPLayer',
             parameterType='Required',
@@ -525,7 +525,7 @@ class TankRisk():
 
     def parse_name(self, layer):
         layer_lookup = {
-            'https://services1.arcgis.com/99lidphwczftie9k/arcgis/rest/services/facilityust/featureserver/0': 'tanks',
+            'https://services1.arcgis.com/99lidPhWCzftIe9K/ArcGIS/rest/services/FacilityPST/FeatureServer/0': 'tanks',
             'https://services.arcgis.com/zzrwjtrez6fjioq4/arcgis/rest/services/podview/featureserver/0': 'points_of_diversion',
             'https://services1.arcgis.com/99lidPhWCzftIe9K/arcgis/rest/services/Soils/FeatureServer/0': 'soil',
             'https://services1.arcgis.com/99lidphwczftie9k/arcgis/rest/services/aquifer_rechargedischargeareas/featureserver/0': 'aquifer_recharge_discharge_areas',
@@ -535,7 +535,7 @@ class TankRisk():
             'https://services1.arcgis.com/99lidPhWCzftIe9K/arcgis/rest/services/CensusTracts2020/FeatureServer/0': 'census_tracts_2020',
             'https://services1.arcgis.com/99lidphwczftie9k/arcgis/rest/services/utahlakesnhd/featureserver/0': 'lakes_nhd',
             'https://services1.arcgis.com/99lidphwczftie9k/arcgis/rest/services/utahstreamsnhd/featureserver/0': 'streams_nhd',
-            'deq_underground_storage_tanks': 'tanks',
+            'petroleum_storage_tank_facilities': 'tanks',
             'aquifer_recharge_discharge_areas': 'aquifer_recharge_discharge_areas',
             'wetlands': 'wetlands',
             'dwq_assessment_units': 'dwq_assessment_units',
