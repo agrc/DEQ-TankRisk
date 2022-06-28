@@ -33,7 +33,7 @@ layer_lookup = {
     'https://services1.arcgis.com/99lidPhWCzftIe9K/arcgis/rest/services/Soils/FeatureServer/0': 'soil',
     'aquifer_recharge_discharge_areas': 'aquifer_recharge_discharge_areas',
     'wetlands': 'wetlands',
-    'dwq_assessment_units': 'dwq_assessment_units',
+    'https://services2.arcgis.com/NnxP4LZ3zX8wWmP9/ArcGIS/rest/services/Utah_DDW_Groundwater_Source_Protection_Zones/FeatureServer/0': 'groundwaterzones',
     'shallow_ground_water': 'shallow_ground_water',
     'census_tracts_2010': 'census_tracts_2010',
     'lakes_nhd': 'lakes_nhd',
