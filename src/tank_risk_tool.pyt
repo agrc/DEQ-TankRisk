@@ -137,7 +137,7 @@ class TankResult():
         'dwq_assessment_units': LayerAttributes(ATTRIBUTE, 'assessmentVal', 'assessmentSev', 'assessmentVal', 'assessmentSev', ['status2006']),
         'soil': LayerAttributes(ATTRIBUTE, 'soilVal', 'soilSev', 'soilVal', 'soilSev', ['musurftexgrp']),
         'shallow_ground_water': LayerAttributes(ATTRIBUTE, 'shallowWaterVal', 'shallowWaterSev', 'shallowWaterVal', 'shallowWaterSev', ['depth']),
-        'census_tracts_2010': LayerAttributes(ATTRIBUTE, 'censusVal', 'censusSev', 'censusVal', 'censusSev', ['pop100', 'arealand']),
+        'census_tracts_2020': LayerAttributes(ATTRIBUTE, 'censusVal', 'censusSev', 'censusVal', 'censusSev', ['pop100', 'arealand']),
         'GroundWaterZones': LayerAttributes(ATTRIBUTE, 'udwspzVal', 'udwspzSev', 'udwspzVal', 'udwspzSev', ['protzone']),
         'SurfaceWaterZones': LayerAttributes(ATTRIBUTE, 'udwspzVal', 'udwspzSev', 'udwspzVal', 'udwspzSev', ['protzone']),
         'points_of_diversion': LayerAttributes(DISTANCE, 'podVal', 'podSev', 'podVal', 'podSev')
@@ -277,7 +277,7 @@ class TankResult():
             tank.set_value_for_layer(layer_name, value)
             tank.set_severity_for_layer(layer_name, score)
 
-        elif layer_name == 'census_tracts_2010':
+        elif layer_name == 'census_tracts_2020':
             value = float(row[1]) / float(row[2])
 
             if value > 0.00181:
@@ -532,7 +532,7 @@ class TankRisk():
             'https://services1.arcgis.com/99lidphwczftie9k/arcgis/rest/services/wetlands/featureserver/0': 'wetlands',
             'https://services1.arcgis.com/99lidphwczftie9k/arcgis/rest/services/dwqassessmentunits/featureserver/0': 'dwq_assessment_units',
             'https://services1.arcgis.com/99lidphwczftie9k/arcgis/rest/services/shallowgroundwater/featureserver/0': 'shallow_ground_water',
-            'https://services1.arcgis.com/99lidphwczftie9k/arcgis/rest/services/censustracts2010/featureserver/0': 'census_tracts_2010',
+            'https://services1.arcgis.com/99lidPhWCzftIe9K/arcgis/rest/services/CensusTracts2020/FeatureServer/0': 'census_tracts_2020',
             'https://services1.arcgis.com/99lidphwczftie9k/arcgis/rest/services/utahlakesnhd/featureserver/0': 'lakes_nhd',
             'https://services1.arcgis.com/99lidphwczftie9k/arcgis/rest/services/utahstreamsnhd/featureserver/0': 'streams_nhd',
             'deq_underground_storage_tanks': 'tanks',
@@ -540,7 +540,7 @@ class TankRisk():
             'wetlands': 'wetlands',
             'dwq_assessment_units': 'dwq_assessment_units',
             'shallow_ground_water': 'shallow_ground_water',
-            'census_tracts_2010': 'census_tracts_2010',
+            'census_tracts_2020': 'census_tracts_2020',
             'lakes_nhd': 'lakes_nhd',
             'streams_nhd': 'streams_nhd',
         }
