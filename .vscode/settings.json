@@ -9,14 +9,22 @@
     "${workspaceRoot}/setup.cfg"
   ],
   "cSpell.words": [
-    "FACILITYUST",
+    "agrc",
     "aprx",
     "arcpy",
+    "DATASETNAME",
     "facilityid",
+    "FACILITYUST",
+    "Geodatabase",
+    "geoscience",
     "objectid",
+    "opensgid",
+    "proproject",
+    "sgid",
     "strftime",
     "tqdm",
     "udwspz",
+    "WORKSPACEPATH",
     "wrpod"
   ],
   "python.testing.promptToConfigure": false,
