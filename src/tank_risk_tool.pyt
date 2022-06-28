@@ -527,7 +527,7 @@ class TankRisk():
         layer_lookup = {
             'https://services1.arcgis.com/99lidphwczftie9k/arcgis/rest/services/facilityust/featureserver/0': 'tanks',
             'https://services.arcgis.com/zzrwjtrez6fjioq4/arcgis/rest/services/podview/featureserver/0': 'points_of_diversion',
-            'https://services1.arcgis.com/99lidphwczftie9k/arcgis/rest/services/utah_soils/featureserver/0': 'soil',
+            'https://services1.arcgis.com/99lidPhWCzftIe9K/arcgis/rest/services/Soils/FeatureServer/0': 'soil',
             'https://services1.arcgis.com/99lidphwczftie9k/arcgis/rest/services/aquifer_rechargedischargeareas/featureserver/0': 'aquifer_recharge_discharge_areas',
             'https://services1.arcgis.com/99lidphwczftie9k/arcgis/rest/services/wetlands/featureserver/0': 'wetlands',
             'https://services1.arcgis.com/99lidphwczftie9k/arcgis/rest/services/dwqassessmentunits/featureserver/0': 'dwq_assessment_units',
