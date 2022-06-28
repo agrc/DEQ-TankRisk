@@ -34,7 +34,7 @@ def add_layers_to_map(project_path, workspace):
     try:
         risk_map = project.listMaps('RiskMap')[0]
     except IndexError:
-        print('Create a map called RiskMap')
+        print('Error. Missing a map called RiskMap. Please create it first and try again')
         return
     RISK_LAYERS.append(TANK_LAYER)
     for layer_name in tqdm(RISK_LAYERS):
