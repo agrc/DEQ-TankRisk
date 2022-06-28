@@ -11,7 +11,7 @@ from pathlib import Path
 
 import arcpy
 
-VERSION = '2.0.1'
+VERSION = '2.1.0'
 
 
 def format_time(seconds):
@@ -126,7 +126,7 @@ class TankResult():
     IN_POLYGON = 'inPolygon'
     DISTANCE = 'distance'
     ATTRIBUTE = 'attribute'
-    OUTPUT_ID_FIELD = 'FACILITYID'
+    OUTPUT_ID_FIELD = 'facilityid'
 
     #: attributesForFeature associates feature names with attributes
     attributes_for_feature = {
