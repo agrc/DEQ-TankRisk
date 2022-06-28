@@ -135,7 +135,7 @@ class TankResult():
         'lakes_nhd': LayerAttributes(DISTANCE, 'lakesVal', 'lakeSev', 'lakesVal', 'lakeSev'),
         'streams_nhd': LayerAttributes(DISTANCE, 'streamsVal', 'streamsSev', 'streamsVal', 'streamsSev'),
         'dwq_assessment_units': LayerAttributes(ATTRIBUTE, 'assessmentVal', 'assessmentSev', 'assessmentVal', 'assessmentSev', ['status2006']),
-        'soil': LayerAttributes(ATTRIBUTE, 'soilVal', 'soilSev', 'soilVal', 'soilSev', ['tex_def']),
+        'soil': LayerAttributes(ATTRIBUTE, 'soilVal', 'soilSev', 'soilVal', 'soilSev', ['musurftexgrp']),
         'shallow_ground_water': LayerAttributes(ATTRIBUTE, 'shallowWaterVal', 'shallowWaterSev', 'shallowWaterVal', 'shallowWaterSev', ['depth']),
         'census_tracts_2010': LayerAttributes(ATTRIBUTE, 'censusVal', 'censusSev', 'censusVal', 'censusSev', ['pop100', 'arealand']),
         'GroundWaterZones': LayerAttributes(ATTRIBUTE, 'udwspzVal', 'udwspzSev', 'udwspzVal', 'udwspzSev', ['protzone']),
