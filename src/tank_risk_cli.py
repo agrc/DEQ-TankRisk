@@ -30,7 +30,7 @@ layer_lookup = {
     'https://services1.arcgis.com/99lidPhWCzftIe9K/ArcGIS/rest/services/FacilityPST/FeatureServer/0': 'tanks',
     'petroleum_storage_tank_facilities': 'tanks',
     'https://services.arcgis.com/ZzrwjTRez6FJiOq4/arcgis/rest/services/PODView/FeatureServer/0': 'points_of_diversion',
-    'https://services1.arcgis.com/99lidPhWCzftIe9K/arcgis/rest/services/Utah_Soils/FeatureServer/0': 'soil',
+    'https://services1.arcgis.com/99lidPhWCzftIe9K/arcgis/rest/services/Soils/FeatureServer/0': 'soil',
     'aquifer_recharge_discharge_areas': 'aquifer_recharge_discharge_areas',
     'wetlands': 'wetlands',
     'dwq_assessment_units': 'dwq_assessment_units',
