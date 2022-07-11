@@ -525,16 +525,17 @@ class TankRisk():
 
     def parse_name(self, layer):
         layer_lookup = {
-            'https://services1.arcgis.com/99lidPhWCzftIe9K/ArcGIS/rest/services/FacilityPST/FeatureServer/0': 'tanks',
+            'https://services1.arcgis.com/99lidphwczftie9k/arcgis/rest/services/facilitypst/featureserver/0': 'tanks',
             'https://services.arcgis.com/zzrwjtrez6fjioq4/arcgis/rest/services/podview/featureserver/0': 'points_of_diversion',
-            'https://services1.arcgis.com/99lidPhWCzftIe9K/arcgis/rest/services/Soils/FeatureServer/0': 'soil',
+            'https://services1.arcgis.com/99lidphwczftie9k/arcgis/rest/services/soils/featureserver/0': 'soil',
             'https://services1.arcgis.com/99lidphwczftie9k/arcgis/rest/services/aquifer_rechargedischargeareas/featureserver/0': 'aquifer_recharge_discharge_areas',
             'https://services1.arcgis.com/99lidphwczftie9k/arcgis/rest/services/wetlands/featureserver/0': 'wetlands',
             'https://services1.arcgis.com/99lidphwczftie9k/arcgis/rest/services/dwqassessmentunits/featureserver/0': 'dwq_assessment_units',
             'https://services1.arcgis.com/99lidphwczftie9k/arcgis/rest/services/shallowgroundwater/featureserver/0': 'shallow_ground_water',
-            'https://services1.arcgis.com/99lidPhWCzftIe9K/arcgis/rest/services/CensusTracts2020/FeatureServer/0': 'census_tracts_2020',
+            'https://services1.arcgis.com/99lidphwczftie9k/arcgis/rest/services/censustracts2020/featureserver/0': 'census_tracts_2020',
             'https://services1.arcgis.com/99lidphwczftie9k/arcgis/rest/services/utahlakesnhd/featureserver/0': 'lakes_nhd',
             'https://services1.arcgis.com/99lidphwczftie9k/arcgis/rest/services/utahstreamsnhd/featureserver/0': 'streams_nhd',
+            'https://services2.arcgis.com/nnxp4lz3zx8wwmp9/arcgis/rest/services/utah_ddw_groundwater_source_protection_zones/featureserver/0': 'GroundWaterZones',
             'petroleum_storage_tank_facilities': 'tanks',
             'aquifer_recharge_discharge_areas': 'aquifer_recharge_discharge_areas',
             'wetlands': 'wetlands',
@@ -642,7 +643,7 @@ class TankRisk():
 
             if feature_name not in TankResult.attributes_for_feature:
                 #: The riskFeatureFactory should not receive unknown layers.
-                messages.AddWarningMessage(f'Unknown risk layer {feature_name}')
+                messages.AddWarningMessage(f'Unknown risk layer {feature}')
 
                 continue
 
