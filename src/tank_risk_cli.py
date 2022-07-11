@@ -35,7 +35,7 @@ layer_lookup = {
     'wetlands': 'wetlands',
     'https://services2.arcgis.com/NnxP4LZ3zX8wWmP9/ArcGIS/rest/services/Utah_DDW_Groundwater_Source_Protection_Zones/FeatureServer/0': 'groundwaterzones',
     'shallow_ground_water': 'shallow_ground_water',
-    'census_tracts_2010': 'census_tracts_2010',
+    'census_tracts_2020': 'census_tracts_2020',
     'lakes_nhd': 'lakes_nhd',
     'streams_nhd': 'streams_nhd',
     'dwq_assessment_units': 'dwq_assessment_units'
