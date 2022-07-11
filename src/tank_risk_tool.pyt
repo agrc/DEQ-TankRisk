@@ -137,7 +137,7 @@ class TankResult():
         'dwq_assessment_units': LayerAttributes(ATTRIBUTE, 'assessmentVal', 'assessmentSev', 'assessmentVal', 'assessmentSev', ['status2006']),
         'soil': LayerAttributes(ATTRIBUTE, 'soilVal', 'soilSev', 'soilVal', 'soilSev', ['musurftexgrp']),
         'shallow_ground_water': LayerAttributes(ATTRIBUTE, 'shallowWaterVal', 'shallowWaterSev', 'shallowWaterVal', 'shallowWaterSev', ['depth']),
-        'census_tracts_2020': LayerAttributes(ATTRIBUTE, 'censusVal', 'censusSev', 'censusVal', 'censusSev', ['pop100', 'arealand']),
+        'census_tracts_2020': LayerAttributes(ATTRIBUTE, 'censusVal', 'censusSev', 'censusVal', 'censusSev', ['pop100', 'aland20']),
         'GroundWaterZones': LayerAttributes(ATTRIBUTE, 'udwspzVal', 'udwspzSev', 'udwspzVal', 'udwspzSev', ['protzone']),
         'SurfaceWaterZones': LayerAttributes(ATTRIBUTE, 'udwspzVal', 'udwspzSev', 'udwspzVal', 'udwspzSev', ['protzone']),
         'points_of_diversion': LayerAttributes(DISTANCE, 'podVal', 'podSev', 'podVal', 'podSev')
