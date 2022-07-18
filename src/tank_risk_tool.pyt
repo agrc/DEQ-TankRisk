@@ -537,6 +537,7 @@ class TankRisk():
             'https://services1.arcgis.com/99lidphwczftie9k/arcgis/rest/services/utahstreamsnhd/featureserver/0': 'streams_nhd',
             'https://services2.arcgis.com/nnxp4lz3zx8wwmp9/arcgis/rest/services/utah_ddw_groundwater_source_protection_zones/featureserver/0': 'GroundWaterZones',
             'petroleum_storage_tank_facilities': 'tanks',
+            'soils': 'soil',
             'aquifer_recharge_discharge_areas': 'aquifer_recharge_discharge_areas',
             'wetlands': 'wetlands',
             'dwq_assessment_units': 'dwq_assessment_units',
