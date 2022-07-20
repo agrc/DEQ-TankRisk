@@ -64,3 +64,5 @@ proproject/sgid.agrc.utah.gov.sde
 proproject/TankRisk/.pyHistory
 
 .pytest_cache/
+proproject/TankRisk/GpMessages/
+proproject/TankRisk/.backups
