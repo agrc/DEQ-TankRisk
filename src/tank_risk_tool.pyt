@@ -267,43 +267,43 @@ class TankResult():
             texture = row[1]
             value = texture.casefold()
 
-            if value.contains('gravel'):
+            if 'gravel' in value:
                 score = 5
-            elif value.contains('cobb'):
+            elif 'cobb' in value:
                 score = 5
-            elif value.contains('ston'):
+            elif 'ston' in value:
                 score = 5
-            elif value.contains('frag'):
+            elif 'frag' in value:
                 score = 5
-            elif value.contains('bould'):
+            elif 'bould' in value:
                 score = 5
-            elif value.contains('course'):
+            elif 'course' in value:
                 score = 5
             elif len(value.strip()) == 0:
                 score = 5
-            elif value.contains('sand'):
+            elif 'sand' in value:
                 score = 4
-            elif value.contains('flag'):
+            elif 'flag' in value:
                 score = 3
-            elif value.contains('channer'):
+            elif 'channer' in value:
                 score = 3
-            elif value.contains('varia'):
+            elif 'varia' in value:
                 score = 3
             elif value == 'loam':
                 score = 3
-            elif value.contains('ashy'):
+            elif 'ashy' in value:
                 score = 3
-            elif value.contains('shaly'):
+            elif 'shaly' in value:
                 score = 2
-            elif value.contains('silt'):
+            elif 'silt' in value:
                 score = 2
-            elif value.contains('plant'):
+            elif 'plant' in value:
                 score = 2
-            elif value.contains('pea'):
+            elif 'pea' in value:
                 score = 2
-            elif value.contains('clay'):
+            elif 'clay' in value:
                 score = 1
-            elif value.contains('bedr'):
+            elif 'bedr' in value:
                 score = 1
             else:
                 score = 1000
