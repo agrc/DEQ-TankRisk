@@ -309,6 +309,15 @@ class TankResult():
             depth = row[1]
             value = depth
 
+            if value == 0:
+                score = 5
+            elif value == 10:
+                score = 2.5
+            elif value == 30:
+                score = 1
+            else:
+                score = 0
+
             tank.set_value_for_layer(layer_name, value)
             tank.set_severity_for_layer(layer_name, score)
 
