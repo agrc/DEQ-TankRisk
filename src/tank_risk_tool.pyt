@@ -267,6 +267,41 @@ class TankResult():
             texture = row[1]
             value = texture
 
+            if value.contains('gravel'):
+                score = 5
+            elif value.contains('cobb'):
+                score = 5
+            elif value.contains('ston'):
+                score = 5
+            elif value.contains('frag'):
+                score = 5
+            elif value.contains('bould'):
+                score = 5
+            elif len(value.strip()) == 0:
+                score = 5
+            elif value.contains('sand'):
+                score = 4
+            elif value.contains('flag'):
+                score = 3
+            elif value.contains('channer'):
+                score = 3
+            elif value.contains('varia'):
+                score = 3
+            elif value == 'loam' :
+                score = 3
+            elif value.contains('silt'):
+                score = 2
+            elif value.contains('plant'):
+                score = 2
+            elif value.contains('pea'):
+                score = 2
+            elif value.contains('clay'):
+                score = 1
+            elif value.contains('bedr'):
+                score = 1
+            else:
+                score = 1000
+
             tank.set_value_for_layer(layer_name, value)
             tank.set_severity_for_layer(layer_name, score)
 
