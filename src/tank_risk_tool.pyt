@@ -265,7 +265,7 @@ class TankResult():
 
         elif layer_name == 'soil':
             texture = row[1]
-            value = texture
+            value = texture.casefold()
 
             if value.contains('gravel'):
                 score = 5
@@ -277,6 +277,8 @@ class TankResult():
                 score = 5
             elif value.contains('bould'):
                 score = 5
+            elif value.contains('course'):
+                score = 5
             elif len(value.strip()) == 0:
                 score = 5
             elif value.contains('sand'):
@@ -287,8 +289,12 @@ class TankResult():
                 score = 3
             elif value.contains('varia'):
                 score = 3
-            elif value == 'loam' :
+            elif value == 'loam':
                 score = 3
+            elif value.contains('ashy'):
+                score = 3
+            elif value.contains('shaly'):
+                score = 2
             elif value.contains('silt'):
                 score = 2
             elif value.contains('plant'):
