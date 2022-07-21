@@ -11,7 +11,7 @@ from pathlib import Path
 
 import arcpy
 
-VERSION = '2.1.3'
+VERSION = '2.1.4'
 
 
 def format_time(seconds):
@@ -266,7 +266,7 @@ class TankResult():
         elif layer_name == 'soil':
             texture = row[1]
             if texture is None:
-                return ('', 0)
+                return ('unknown', 0)
 
             value = texture.casefold()
 
