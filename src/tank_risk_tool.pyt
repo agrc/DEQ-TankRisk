@@ -265,6 +265,9 @@ class TankResult():
 
         elif layer_name == 'soil':
             texture = row[1]
+            if texture is None:
+                return ('', 0)
+
             value = texture.casefold()
 
             if 'gravel' in value:
