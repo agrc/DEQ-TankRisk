@@ -312,7 +312,7 @@ class TankResult():
             elif 'bedr' in value:
                 score = 1
             else:
-                score = 1000
+                score = 5
 
             tank.set_value_for_layer(layer_name, value)
             tank.set_severity_for_layer(layer_name, score)
