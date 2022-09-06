@@ -11,7 +11,7 @@ from pathlib import Path
 
 import arcpy
 
-VERSION = '2.1.4'
+VERSION = '2.1.5'
 
 
 def format_time(seconds):
