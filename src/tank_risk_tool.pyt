@@ -266,7 +266,10 @@ class TankResult():
         elif layer_name == 'soil':
             texture = row[1]
             if texture is None:
-                return ('unknown', 0)
+                tank.set_value_for_layer(layer_name, 'No data')
+                tank.set_severity_for_layer(layer_name, 5)
+
+                return ('No data', 5)
 
             value = texture.casefold()
 
