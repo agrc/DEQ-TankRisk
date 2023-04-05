@@ -22,7 +22,7 @@ RISK_LAYERS = [
     'opensgid.geoscience.shallow_ground_water',
     'https://services1.arcgis.com/99lidPhWCzftIe9K/arcgis/rest/services/Soils/FeatureServer/0',  #: soils
     'opensgid.environment.dwq_assessment_units',
-    'opensgid.water.wetlands',
+    'https://fwspublicservices.wim.usgs.gov/wetlandsmapservice/rest/services/Wetlands/MapServer/0',
     'opensgid.geoscience.aquifer_recharge_discharge_areas',
     'https://services.arcgis.com/ZzrwjTRez6FJiOq4/arcgis/rest/services/PODView/FeatureServer/0',  #: points of diversion
     'https://services2.arcgis.com/NnxP4LZ3zX8wWmP9/ArcGIS/rest/services/Utah_DDW_Groundwater_Source_Protection_Zones/FeatureServer/0'  #: ground water zones
