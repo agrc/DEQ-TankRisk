@@ -13,7 +13,7 @@ This project is for an ArcGIS Pro python tool that calculates a relationship bet
    - SurfaceWaterZones **Feature name must be exact and available in a local file geodatabase.**
    - Streams NHD
    - DWQ Assessment Units
-   - Wetlands
+   - UT_Wetlands **Feature name must be exact and available in a local file geodatabase.**
    - Census Tracts 2020
    - GroundWaterZones
    - Points of Diversion
