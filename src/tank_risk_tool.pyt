@@ -686,7 +686,7 @@ class TankRisk:
             "https://services1.arcgis.com/99lidphwczftie9k/arcgis/rest/services/censustracts2020/featureserver/0": "census_tracts_2020",
             "https://services1.arcgis.com/99lidphwczftie9k/arcgis/rest/services/utahlakesnhd/featureserver/0": "lakes_nhd",
             "https://services1.arcgis.com/99lidphwczftie9k/arcgis/rest/services/utahstreamsnhd/featureserver/0": "streams_nhd",
-            "https://services2.arcgis.com/nnxp4lz3zx8wwmp9/arcgis/rest/services/utah_ddw_groundwater_source_protection_zones/featureserver/0": "GroundWaterZones",
+            "https://services2.arcgis.com/NnxP4LZ3zX8wWmP9/ArcGIS/rest/services/Utah_DDW_Groundwater_Source_Protection_Zones/FeatureServer/4": "GroundWaterZones",
             #: open sgid tables
             "petroleum_storage_tank_facilities": "tanks",
             "soils": "soil",
