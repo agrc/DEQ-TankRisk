@@ -10,7 +10,7 @@ import time
 
 import arcpy
 
-VERSION = "2.1.6"
+VERSION = "2.1.7"
 
 
 def format_time(seconds):
@@ -677,7 +677,7 @@ class TankRisk:
         layer_lookup = {
             #: arcgis online services
             "https://services1.arcgis.com/99lidphwczftie9k/arcgis/rest/services/facilitypst/featureserver/0": "tanks",
-            "https://services.arcgis.com/zzrwjtrez6fjioq4/arcgis/rest/services/podview/featureserver/0": "points_of_diversion",
+            "https://services.arcgis.com/zzrwjtrez6fjioq4/arcgis/rest/services/utah_points_of_diversion/featureserver/0": "points_of_diversion",
             "https://services1.arcgis.com/99lidphwczftie9k/arcgis/rest/services/soils/featureserver/0": "soil",
             "https://services1.arcgis.com/99lidphwczftie9k/arcgis/rest/services/aquifer_rechargedischargeareas/featureserver/0": "aquifer_recharge_discharge_areas",
             "https://fwspublicservices.wim.usgs.gov/wetlandsmapservice/rest/services/wetlands/mapserver/0": "Wetlands",
