@@ -164,7 +164,7 @@ class TankResult:
             "assessmentSev",
             "assessmentVal",
             "assessmentSev",
-            ["status2006"],
+            ["assessment"],
         ),
         "soil": LayerAttributes(
             ATTRIBUTE, "soilVal", "soilSev", "soilVal", "soilSev", ["musurftexgrp"]
