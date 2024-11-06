@@ -323,9 +323,9 @@ class TankResult:
             status = str(row[1])
             value = status
 
-            if status == "Fully Supporting":
+            if status.startswith("1") or status.startswith("2"):
                 score = 2
-            elif status == "Impaired" or status == "Not Assessed":
+            else:
                 score = 5
 
             tank.set_value_for_layer(layer_name, value)
@@ -681,7 +681,7 @@ class TankRisk:
             "https://services1.arcgis.com/99lidphwczftie9k/arcgis/rest/services/soils/featureserver/0": "soil",
             "https://services1.arcgis.com/99lidphwczftie9k/arcgis/rest/services/aquifer_rechargedischargeareas/featureserver/0": "aquifer_recharge_discharge_areas",
             "https://fwspublicservices.wim.usgs.gov/wetlandsmapservice/rest/services/wetlands/mapserver/0": "Wetlands",
-            "https://services1.arcgis.com/99lidphwczftie9k/arcgis/rest/services/dwqassessmentunits/featureserver/0": "dwq_assessment_units",
+            "https://services2.arcgis.com/nnxp4lz3zx8wwmp9/arcgis/rest/services/assessed_waters_gdb/featureserver/0": "dwq_assessment_units",
             "https://services1.arcgis.com/99lidphwczftie9k/arcgis/rest/services/shallowgroundwater/featureserver/0": "shallow_ground_water",
             "https://services1.arcgis.com/99lidphwczftie9k/arcgis/rest/services/censustracts2020/featureserver/0": "census_tracts_2020",
             "https://services1.arcgis.com/99lidphwczftie9k/arcgis/rest/services/utahlakesnhd/featureserver/0": "lakes_nhd",
@@ -691,7 +691,6 @@ class TankRisk:
             "petroleum_storage_tank_facilities": "tanks",
             "soils": "soil",
             "aquifer_recharge_discharge_areas": "aquifer_recharge_discharge_areas",
-            "dwq_assessment_units": "dwq_assessment_units",
             "shallow_ground_water": "shallow_ground_water",
             "census_tracts_2020": "census_tracts_2020",
             "lakes_nhd": "lakes_nhd",
